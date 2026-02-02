@@ -51,3 +51,8 @@ next-env.d.ts
 
 # OS
 Thumbs.db
+
+# Proprietary services (not open source)
+services/*
+!services/README.md
+!services/.gitkeep
