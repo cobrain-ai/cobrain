@@ -10,11 +10,16 @@
     "clean": "rm -rf .next node_modules"
   },
   "dependencies": {
+    "@cobrain/database": "workspace:*",
+    "bcryptjs": "^2.4.3",
     "next": "^15.1.0",
+    "next-auth": "^5.0.0-beta.4",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
