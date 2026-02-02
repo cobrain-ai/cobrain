@@ -1,0 +1,214 @@
+// CoBrain Database Schema
+// Using Prisma ORM with SQLite for local development
+// Can be switched to PostgreSQL for production
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Enums
+// ============================================
+
+enum NoteSource {
+  text
+  voice
+  import
+}
+
+enum ReminderStatus {
+  pending
+  triggered
+  dismissed
+  completed
+}
+
+enum ReminderType {
+  time
+  commitment
+  follow_up
+}
+
+// ============================================
+// User Management
+// ============================================
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  avatarUrl String?
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  notes     Note[]
+  reminders Reminder[]
+
+  @@map("users")
+}
+
+// ============================================
+// Notes & Content
+// ============================================
+
+model Note {
+  id         String     @id @default(uuid())
+  content    String
+  rawContent String?    // Original input before processing
+  source     NoteSource @default(text)
+  isPinned   Boolean    @default(false)
+  isArchived Boolean    @default(false)
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entities   NoteEntity[]
+  reminders  Reminder[]
+  embedding  Embedding?
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("notes")
+}
+
+// ============================================
+// Knowledge Graph - Entities
+// ============================================
+
+model Entity {
+  id        String   @id @default(uuid())
+  type      String   // person, place, organization, date, time, project, task, topic, custom
+  name      String
+  normalizedName String // lowercase, trimmed for matching
+  metadata  Json     @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  noteEntities NoteEntity[]
+
+  // Graph relationships
+  relationsFrom EntityRelation[] @relation("FromEntity")
+  relationsTo   EntityRelation[] @relation("ToEntity")
+
+  @@unique([type, normalizedName])
+  @@index([type])
+  @@index([normalizedName])
+  @@map("entities")
+}
+
+model NoteEntity {
+  id         String  @id @default(uuid())
+  noteId     String
+  entityId   String
+  confidence Float   @default(1.0)
+  startIndex Int?    // Position in note content
+  endIndex   Int?
+
+  note   Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  entity Entity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@unique([noteId, entityId])
+  @@index([noteId])
+  @@index([entityId])
+  @@map("note_entities")
+}
+
+// ============================================
+// Knowledge Graph - Relations
+// ============================================
+
+model EntityRelation {
+  id       String @id @default(uuid())
+  fromId   String
+  toId     String
+  type     String // mentions, related_to, part_of, depends_on, assigned_to, etc.
+  weight   Float  @default(1.0)
+  metadata Json   @default("{}")
+
+  createdAt DateTime @default(now())
+
+  fromEntity Entity @relation("FromEntity", fields: [fromId], references: [id], onDelete: Cascade)
+  toEntity   Entity @relation("ToEntity", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@unique([fromId, toId, type])
+  @@index([fromId])
+  @@index([toId])
+  @@index([type])
+  @@map("entity_relations")
+}
+
+// ============================================
+// Vector Embeddings
+// ============================================
+
+model Embedding {
+  id       String @id @default(uuid())
+  noteId   String @unique
+  vector   Bytes  // Serialized Float32Array
+  model    String @default("nomic-embed-text") // Model used to generate embedding
+  dimensions Int  @default(768)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([noteId])
+  @@map("embeddings")
+}
+
+// ============================================
+// Reminders & Notifications
+// ============================================
+
+model Reminder {
+  id          String         @id @default(uuid())
+  noteId      String
+  userId      String
+  message     String
+  triggerAt   DateTime
+  recurring   String?        // cron pattern for recurring reminders
+  status      ReminderStatus @default(pending)
+
+  extractedText String?      // Original text that triggered the reminder
+  type         ReminderType  @default(time)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([triggerAt])
+  @@map("reminders")
+}
+
+// ============================================
+// Sync & Offline Support (Future)
+// ============================================
+
+model SyncLog {
+  id        String   @id @default(uuid())
+  operation String   // create, update, delete
+  tableName String
+  recordId  String
+  data      Json
+  syncedAt  DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([syncedAt])
+  @@map("sync_log")
+}
