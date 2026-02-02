@@ -1,12 +1,21 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 
 interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
+  sources?: Array<{ noteId: string; excerpt: string }>
+}
+
+interface ChatResponse {
+  answer: string
+  confidence: number
+  sources: Array<{ noteId: string; relevance: number; excerpt: string }>
+  suggestedFollowups: string[]
+  conversationId: string
 }
 
 export default function ChatPage() {
@@ -14,49 +23,102 @@ export default function ChatPage() {
     {
       id: '1',
       role: 'assistant',
-      content: "Hi! I'm your CoBrain assistant. Ask me anything about your notes, or use natural language to find information you've captured.",
+      content:
+        "Hi! I'm your CoBrain assistant. Ask me anything about your notes, or use natural language to find information you've captured.",
       timestamp: new Date(),
     },
   ])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [conversationId, setConversationId] = useState<string | null>(null)
+  const [suggestedFollowups, setSuggestedFollowups] = useState<string[]>([
+    'What do I need to do today?',
+    "Show me my recent notes",
+    'What are my upcoming meetings?',
+  ])
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim() || isLoading) return
+  const sendMessage = useCallback(
+    async (messageText: string) => {
+      if (!messageText.trim() || isLoading) return
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
-      timestamp: new Date(),
-    }
-
-    setMessages((prev) => [...prev, userMessage])
-    setInput('')
-    setIsLoading(true)
-
-    // TODO: Implement actual AI query
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: `I'm still learning! Once the AI is connected, I'll be able to search through your notes and answer questions. You asked: "${input}"`,
+      const userMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content: messageText,
         timestamp: new Date(),
       }
-      setMessages((prev) => [...prev, assistantMessage])
-      setIsLoading(false)
-    }, 1000)
+
+      setMessages((prev) => [...prev, userMessage])
+      setInput('')
+      setIsLoading(true)
+
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: messageText,
+            conversationId,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to get response')
+        }
+
+        const data: ChatResponse = await response.json()
+
+        const assistantMessage: Message = {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: data.answer,
+          timestamp: new Date(),
+          sources: data.sources,
+        }
+
+        setMessages((prev) => [...prev, assistantMessage])
+        setConversationId(data.conversationId)
+        setSuggestedFollowups(data.suggestedFollowups)
+      } catch (error) {
+        console.error('Chat error:', error)
+        const errorMessage: Message = {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content:
+            "I'm sorry, I encountered an error. Please try again.",
+          timestamp: new Date(),
+        }
+        setMessages((prev) => [...prev, errorMessage])
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [conversationId, isLoading]
+  )
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await sendMessage(input)
+  }
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setInput(suggestion)
+    sendMessage(suggestion)
   }
 
   return (
     <div className="flex flex-col h-full max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Chat with Your Notes</h1>
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold">Chat with Your Notes</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          Ask questions in natural language to search and understand your notes
+        </p>
+      </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-4 mb-4">
@@ -66,13 +128,31 @@ export default function ChatPage() {
             className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[80%] p-4 rounded-2xl ${
+              className={`max-w-[85%] p-4 rounded-2xl ${
                 message.role === 'user'
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
               }`}
             >
               <p className="whitespace-pre-wrap">{message.content}</p>
+
+              {/* Source citations */}
+              {message.sources && message.sources.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                  <p className="text-xs font-medium mb-2 text-gray-500">
+                    Sources:
+                  </p>
+                  {message.sources.map((source, i) => (
+                    <div
+                      key={i}
+                      className="text-xs p-2 mb-1 rounded bg-white/10 dark:bg-black/10"
+                    >
+                      {source.excerpt}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <p
                 className={`text-xs mt-2 ${
                   message.role === 'user'
@@ -88,13 +168,23 @@ export default function ChatPage() {
             </div>
           </div>
         ))}
+
         {isLoading && (
           <div className="flex justify-start">
             <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-2xl">
               <div className="flex gap-1">
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <span
+                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                  style={{ animationDelay: '0ms' }}
+                />
+                <span
+                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                  style={{ animationDelay: '150ms' }}
+                />
+                <span
+                  className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                  style={{ animationDelay: '300ms' }}
+                />
               </div>
             </div>
           </div>
@@ -121,19 +211,16 @@ export default function ChatPage() {
         </button>
       </form>
 
-      {/* Example queries */}
+      {/* Suggested follow-ups */}
       <div className="mt-4 flex flex-wrap gap-2">
-        {[
-          'What did I write about yesterday?',
-          'When is my meeting with John?',
-          'Show notes about the project',
-        ].map((query) => (
+        {suggestedFollowups.map((suggestion) => (
           <button
-            key={query}
-            onClick={() => setInput(query)}
-            className="px-3 py-1.5 text-sm rounded-full border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            key={suggestion}
+            onClick={() => handleSuggestionClick(suggestion)}
+            disabled={isLoading}
+            className="px-3 py-1.5 text-sm rounded-full border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
           >
-            {query}
+            {suggestion}
           </button>
         ))}
       </div>
