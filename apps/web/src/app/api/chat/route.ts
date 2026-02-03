@@ -1,183 +1,193 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
 import { z } from 'zod'
+import { auth } from '@/lib/auth'
 import { notesRepository, embeddingsRepository } from '@cobrain/database'
 import { processQuery } from '@cobrain/ai'
-import { ProviderFactory, type LLMProvider } from '@cobrain/core'
-import type { Note } from '@cobrain/core'
+import type { LLMProvider, Note } from '@cobrain/core'
+import { providerConfigStore } from '@/lib/provider-config-store'
+import { createProvider } from '@/lib/providers'
+import type { ProviderConfig } from '@/lib/providers'
 
 const chatSchema = z.object({
   message: z.string().min(1, 'Message is required'),
   conversationId: z.string().optional(),
 })
 
-// Get LLM provider - defaults to Ollama for local-first approach
-async function getProvider(): Promise<LLMProvider | null> {
-  try {
-    // Try Ollama first (local)
-    const provider = ProviderFactory.ollama({ model: 'llama3:8b' })
-    await provider.initialize()
+export async function POST(request: Request): Promise<NextResponse> {
+  const session = await auth()
 
-    if (await provider.isAvailable()) {
-      return provider
-    }
-  } catch {
-    // Ollama not available, try other providers
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // TODO: Add fallback to cloud providers if configured
-  // Could check for API keys in environment and use OpenAI/Anthropic
+  const parseResult = await parseRequestBody(request)
+  if ('error' in parseResult) {
+    return NextResponse.json({ error: parseResult.error }, { status: 400 })
+  }
 
-  return null
-}
+  const { message, conversationId } = parseResult
+  const startTime = Date.now()
+  const newConversationId = conversationId ?? crypto.randomUUID()
 
-// Convert database note to core Note type
-function toNote(dbNote: {
-  id: string
-  content: string
-  rawContent: string | null
-  createdAt: Date
-  updatedAt: Date
-  isPinned: boolean
-  isArchived: boolean
-  source: string
-}): Note {
-  return {
-    id: dbNote.id,
-    content: dbNote.content,
-    rawContent: dbNote.rawContent ?? undefined,
-    entities: [],
-    createdAt: dbNote.createdAt,
-    updatedAt: dbNote.updatedAt,
-    metadata: {
-      source: dbNote.source as 'text' | 'voice' | 'import',
-      isPinned: dbNote.isPinned,
-      isArchived: dbNote.isArchived,
-    },
+  const provider = await getProviderForUser(session.user.id)
+
+  if (!provider) {
+    return NextResponse.json({
+      answer: getNoProviderResponse(message),
+      confidence: 1.0,
+      sources: [],
+      suggestedFollowups: [
+        'How do I set up Ollama?',
+        'What AI providers are supported?',
+      ],
+      processingTime: Date.now() - startTime,
+      conversationId: newConversationId,
+      providerStatus: 'unavailable',
+    })
+  }
+
+  const relevantNotes = await fetchRelevantNotes(session.user.id, message)
+
+  try {
+    const response = await processQuery(
+      { query: message, conversationId },
+      relevantNotes,
+      provider
+    )
+
+    return NextResponse.json({
+      ...response,
+      conversationId: newConversationId,
+      providerStatus: 'connected',
+    })
+  } catch (error) {
+    console.error('LLM processing error:', error)
+
+    return NextResponse.json({
+      answer: getFallbackResponse(message, relevantNotes),
+      confidence: 0.5,
+      sources: relevantNotes.slice(0, 3).map((note, i) => ({
+        noteId: note.id,
+        relevance: 1 - i * 0.1,
+        excerpt: note.content.substring(0, 150),
+      })),
+      suggestedFollowups: [
+        'Tell me more about my recent notes',
+        'What tasks do I have?',
+      ],
+      processingTime: Date.now() - startTime,
+      conversationId: newConversationId,
+      providerStatus: 'error',
+    })
+  } finally {
+    await provider.dispose()
   }
 }
 
-export async function POST(request: Request) {
+async function parseRequestBody(
+  request: Request
+): Promise<z.infer<typeof chatSchema> | { error: string }> {
   try {
-    const session = await auth()
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const body = await request.json()
     const result = chatSchema.safeParse(body)
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error.errors[0].message },
-        { status: 400 }
-      )
+      return { error: result.error.errors[0].message }
     }
 
-    const { message, conversationId } = result.data
-    const startTime = Date.now()
-
-    // Get LLM provider
-    const provider = await getProvider()
-
-    if (!provider) {
-      // Return helpful message when no AI provider available
-      return NextResponse.json({
-        answer: getNoProviderResponse(message),
-        confidence: 1.0,
-        sources: [],
-        suggestedFollowups: [
-          'How do I set up Ollama?',
-          'What AI providers are supported?',
-        ],
-        processingTime: Date.now() - startTime,
-        conversationId: conversationId ?? crypto.randomUUID(),
-        providerStatus: 'unavailable',
-      })
-    }
-
-    // Get user's notes for context
-    let relevantNotes: Note[] = []
-
-    try {
-      // First try semantic search if embeddings exist
-      const queryEmbedding = await getQueryEmbedding(message)
-
-      if (queryEmbedding) {
-        const similarNotes = await embeddingsRepository.findSimilar(
-          queryEmbedding,
-          session.user.id,
-          { limit: 10, threshold: 0.5 }
-        )
-        const noteIds = similarNotes.map((n) => n.noteId)
-
-        if (noteIds.length > 0) {
-          const dbNotes = await notesRepository.findByIds(noteIds)
-          relevantNotes = dbNotes.map(toNote)
-        }
-      }
-
-      // If no semantic results, fall back to recent notes
-      if (relevantNotes.length === 0) {
-        const dbNotes = await notesRepository.findByUser({
-          userId: session.user.id,
-          limit: 20,
-        })
-        relevantNotes = dbNotes.map(toNote)
-      }
-    } catch (error) {
-      console.error('Error fetching notes for context:', error)
-      // Continue with empty context
-    }
-
-    // Process query with LLM
-    try {
-      const response = await processQuery(
-        { query: message, conversationId },
-        relevantNotes,
-        provider
-      )
-
-      return NextResponse.json({
-        ...response,
-        conversationId: conversationId ?? crypto.randomUUID(),
-        providerStatus: 'connected',
-      })
-    } catch (error) {
-      console.error('LLM processing error:', error)
-
-      // Return fallback response
-      return NextResponse.json({
-        answer: getFallbackResponse(message, relevantNotes),
-        confidence: 0.5,
-        sources: relevantNotes.slice(0, 3).map((note, i) => ({
-          noteId: note.id,
-          relevance: 1 - i * 0.1,
-          excerpt: note.content.substring(0, 150),
-        })),
-        suggestedFollowups: [
-          'Tell me more about my recent notes',
-          'What tasks do I have?',
-        ],
-        processingTime: Date.now() - startTime,
-        conversationId: conversationId ?? crypto.randomUUID(),
-        providerStatus: 'error',
-      })
-    } finally {
-      // Clean up provider
-      await provider.dispose()
-    }
-  } catch (error) {
-    console.error('Chat error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return result.data
+  } catch {
+    return { error: 'Invalid JSON body' }
   }
 }
 
-// Get embedding for query using Ollama
+async function getProviderForUser(userId: string): Promise<LLMProvider | null> {
+  const userConfig = providerConfigStore.get(userId)
+  const activeConfig = getActiveProviderConfig(userConfig)
+
+  const provider = createProvider({
+    type: activeConfig.type,
+    config: activeConfig,
+  })
+
+  if (provider) {
+    const initialized = await initializeProvider(provider)
+    if (initialized) return provider
+  }
+
+  // Fallback to Ollama
+  const fallbackProvider = createProvider({ type: 'ollama' })
+  if (fallbackProvider) {
+    const initialized = await initializeProvider(fallbackProvider)
+    if (initialized) return fallbackProvider
+  }
+
+  return null
+}
+
+function getActiveProviderConfig(
+  userConfig: ReturnType<typeof providerConfigStore.get>
+): ProviderConfig {
+  const activeConfig = userConfig.configs[userConfig.activeProvider]
+
+  if (activeConfig?.enabled) {
+    return activeConfig
+  }
+
+  // Fall back to Ollama if active provider is not enabled
+  return userConfig.configs.ollama
+}
+
+async function initializeProvider(provider: LLMProvider): Promise<boolean> {
+  try {
+    await provider.initialize()
+    if (await provider.isAvailable()) {
+      return true
+    }
+    await provider.dispose()
+    return false
+  } catch (error) {
+    console.error('Provider initialization error:', error)
+    try {
+      await provider.dispose()
+    } catch {
+      // Ignore disposal errors
+    }
+    return false
+  }
+}
+
+async function fetchRelevantNotes(userId: string, query: string): Promise<Note[]> {
+  try {
+    // First try semantic search if embeddings exist
+    const queryEmbedding = await getQueryEmbedding(query)
+
+    if (queryEmbedding) {
+      const similarNotes = await embeddingsRepository.findSimilar(
+        queryEmbedding,
+        userId,
+        { limit: 10, threshold: 0.5 }
+      )
+
+      if (similarNotes.length > 0) {
+        const noteIds = similarNotes.map((n) => n.noteId)
+        const dbNotes = await notesRepository.findByIds(noteIds)
+        return dbNotes.map(toNote)
+      }
+    }
+
+    // Fall back to recent notes
+    const dbNotes = await notesRepository.findByUser({
+      userId,
+      limit: 20,
+    })
+    return dbNotes.map(toNote)
+  } catch (error) {
+    console.error('Error fetching notes for context:', error)
+    return []
+  }
+}
+
 async function getQueryEmbedding(query: string): Promise<number[] | null> {
   try {
     const response = await fetch('http://localhost:11434/api/embeddings', {
@@ -195,6 +205,33 @@ async function getQueryEmbedding(query: string): Promise<number[] | null> {
     return data.embedding as number[]
   } catch {
     return null
+  }
+}
+
+interface DatabaseNote {
+  id: string
+  content: string
+  rawContent: string | null
+  createdAt: Date
+  updatedAt: Date
+  isPinned: boolean
+  isArchived: boolean
+  source: string
+}
+
+function toNote(dbNote: DatabaseNote): Note {
+  return {
+    id: dbNote.id,
+    content: dbNote.content,
+    rawContent: dbNote.rawContent ?? undefined,
+    entities: [],
+    createdAt: dbNote.createdAt,
+    updatedAt: dbNote.updatedAt,
+    metadata: {
+      source: dbNote.source as 'text' | 'voice' | 'import',
+      isPinned: dbNote.isPinned,
+      isArchived: dbNote.isArchived,
+    },
   }
 }
 
@@ -228,20 +265,19 @@ function getFallbackResponse(message: string, notes: Note[]): string {
     return "I couldn't find any relevant notes. Try capturing some notes first, and I'll be able to search through them to answer your questions."
   }
 
-  const lowerMessage = message.toLowerCase()
-
   // Simple keyword matching fallback
+  const keywords = message.split(' ').filter((word) => word.length > 2)
   const relevantNotes = notes.filter((note) =>
-    message
-      .split(' ')
-      .some((word) => word.length > 2 && note.content.toLowerCase().includes(word.toLowerCase()))
+    keywords.some((word) => note.content.toLowerCase().includes(word.toLowerCase()))
   )
 
   if (relevantNotes.length > 0) {
-    return `I found ${relevantNotes.length} potentially relevant note(s). Here's what I found:\n\n${relevantNotes
+    const excerpts = relevantNotes
       .slice(0, 3)
       .map((n, i) => `${i + 1}. ${n.content.substring(0, 100)}...`)
-      .join('\n\n')}\n\nNote: AI processing encountered an issue. This is a basic keyword match.`
+      .join('\n\n')
+
+    return `I found ${relevantNotes.length} potentially relevant note(s). Here's what I found:\n\n${excerpts}\n\nNote: AI processing encountered an issue. This is a basic keyword match.`
   }
 
   return `I have ${notes.length} notes but couldn't find specific matches for your query. Try asking about:\n- Your recent captures\n- Specific people or projects you've mentioned\n- Tasks or reminders`
