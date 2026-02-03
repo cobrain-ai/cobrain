@@ -2,7 +2,7 @@
 
 > Your AI thinking partner. Open-source second brain with local AI.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 ---
@@ -194,7 +194,30 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ## 📄 License
 
-CoBrain is open-source software licensed under the [MIT License](LICENSE).
+CoBrain uses a dual-licensing model:
+
+| Component | License |
+|-----------|---------|
+| Core Application (`apps/`, `packages/`) | [AGPL-3.0](LICENSE) |
+| Cloud Services (`services/`) | Proprietary |
+| Documentation | CC-BY-4.0 |
+
+### Open Source (AGPL-3.0)
+
+The core CoBrain application is open-source under [AGPL-3.0](LICENSE). You can:
+- Use, modify, and distribute the software
+- Run it for personal or internal business use
+- Contribute improvements back to the community
+
+**Note:** If you modify CoBrain and offer it as a network service, you must release your source code under AGPL-3.0.
+
+### Commercial License
+
+For organizations that cannot comply with AGPL-3.0 (e.g., closed-source products, SaaS), we offer commercial licenses. See [COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md) for details.
+
+### Contributing
+
+By contributing to CoBrain, you agree to our [Contributor License Agreement](CLA.md).
 
 ---
 
