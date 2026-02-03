@@ -137,4 +137,21 @@ export const notesRepository = {
       },
     })
   },
+
+  async findByIds(ids: string[]): Promise<Note[]> {
+    if (ids.length === 0) return []
+
+    const notes = await prisma.note.findMany({
+      where: {
+        id: { in: ids },
+      },
+    })
+
+    // Preserve order of input IDs
+    const noteMap = new Map(notes.map((n) => [n.id, n]))
+    return ids
+      .map((id) => noteMap.get(id))
+      .filter((n): n is NonNullable<typeof n> => n !== undefined)
+      .map(toNote)
+  },
 }

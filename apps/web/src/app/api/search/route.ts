@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { z } from 'zod'
+import { notesRepository, embeddingsRepository } from '@cobrain/database'
+import { search as semanticSearch, keywordSearch } from '@cobrain/ai'
+import type { Note } from '@cobrain/core'
 
 const searchSchema = z.object({
   query: z.string().min(1, 'Query is required'),
@@ -20,11 +23,56 @@ const searchSchema = z.object({
     .optional(),
 })
 
+// Convert database note to core Note type
+function toNote(dbNote: {
+  id: string
+  content: string
+  rawContent: string | null
+  createdAt: Date
+  updatedAt: Date
+  isPinned: boolean
+  isArchived: boolean
+  source: string
+}): Note {
+  return {
+    id: dbNote.id,
+    content: dbNote.content,
+    rawContent: dbNote.rawContent ?? undefined,
+    entities: [],
+    createdAt: dbNote.createdAt,
+    updatedAt: dbNote.updatedAt,
+    metadata: {
+      source: dbNote.source as 'text' | 'voice' | 'import',
+      isPinned: dbNote.isPinned,
+      isArchived: dbNote.isArchived,
+    },
+  }
+}
+
+// Get embedding for query using Ollama
+async function getEmbedding(text: string): Promise<number[]> {
+  const response = await fetch('http://localhost:11434/api/embeddings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'nomic-embed-text',
+      prompt: text,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Embedding error: ${response.status}`)
+  }
+
+  const data = await response.json()
+  return data.embedding as number[]
+}
+
 export async function POST(request: Request) {
   try {
     const session = await auth()
 
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -41,20 +89,88 @@ export async function POST(request: Request) {
     const { query, limit, mode, filters } = result.data
     const startTime = Date.now()
 
-    // TODO: Implement actual search
-    // 1. Get user's notes from database
-    // const notes = await notesRepository.findByUser({ userId: session.user.id })
-    // 2. Perform search based on mode
-    // const results = await search({ query, limit, mode, filters }, notes, getEmbedding)
+    // Get user's notes
+    const dbNotes = await notesRepository.findByUser({
+      userId: session.user.id,
+      limit: 100, // Get more notes for search filtering
+      includeArchived: false,
+    })
 
-    // Mock response for now
-    const mockResults = generateMockResults(query, limit)
+    if (dbNotes.length === 0) {
+      return NextResponse.json({
+        results: [],
+        total: 0,
+        query,
+        mode,
+        processingTime: Date.now() - startTime,
+      })
+    }
+
+    const notes = dbNotes.map(toNote)
+
+    // Apply date filters if provided
+    let filteredNotes = notes
+    if (filters?.dateRange) {
+      const { start, end } = filters.dateRange
+      filteredNotes = notes.filter((note) => {
+        if (start && note.createdAt < new Date(start)) return false
+        if (end && note.createdAt > new Date(end)) return false
+        return true
+      })
+    }
+
+    // Try semantic search first
+    let searchResults
+
+    if (mode === 'keyword') {
+      // Keyword only
+      searchResults = keywordSearch(query, filteredNotes, { maxResults: limit })
+    } else {
+      // Try semantic or hybrid
+      try {
+        // Check if we have embeddings
+        const queryEmbedding = await getEmbedding(query)
+
+        // Load embeddings for notes
+        const noteIds = filteredNotes.map((n) => n.id)
+        const embeddings = await embeddingsRepository.findByNoteIds(noteIds)
+
+        // Attach embeddings to notes
+        const embeddingMap = new Map(embeddings.map((e) => [e.noteId, e.vector]))
+        const notesWithEmbeddings = filteredNotes.map((note) => ({
+          ...note,
+          embedding: embeddingMap.get(note.id)
+            ? deserializeEmbedding(embeddingMap.get(note.id)!)
+            : undefined,
+        }))
+
+        searchResults = await semanticSearch(
+          { query, limit, mode, filters },
+          notesWithEmbeddings,
+          async () => queryEmbedding
+        )
+      } catch (error) {
+        console.log('Semantic search unavailable, falling back to keyword:', error)
+        // Fall back to keyword search
+        searchResults = keywordSearch(query, filteredNotes, { maxResults: limit })
+      }
+    }
+
+    // Enrich results with note details
+    const enrichedResults = searchResults.map((result) => {
+      const note = filteredNotes.find((n) => n.id === result.noteId)
+      return {
+        ...result,
+        createdAt: note?.createdAt.toISOString(),
+        isPinned: note?.metadata?.isPinned,
+      }
+    })
 
     return NextResponse.json({
-      results: mockResults,
-      total: mockResults.length,
+      results: enrichedResults,
+      total: enrichedResults.length,
       query,
-      mode,
+      mode: searchResults[0]?.matchType ?? mode,
       processingTime: Date.now() - startTime,
     })
   } catch (error) {
@@ -66,59 +182,8 @@ export async function POST(request: Request) {
   }
 }
 
-function generateMockResults(query: string, limit: number) {
-  // Generate mock results based on query
-  const lowerQuery = query.toLowerCase()
-  const results = []
-
-  // Simulate finding relevant notes
-  const mockNotes = [
-    {
-      id: '1',
-      content: 'Meeting with John about the project proposal. Need to review budget.',
-      date: '2026-02-03',
-    },
-    {
-      id: '2',
-      content: 'Ideas for the new feature: AI-powered organization, semantic search',
-      date: '2026-02-02',
-    },
-    {
-      id: '3',
-      content: 'Remember to call Sarah about the team meeting tomorrow',
-      date: '2026-02-01',
-    },
-  ]
-
-  for (const note of mockNotes) {
-    if (
-      note.content.toLowerCase().includes(lowerQuery) ||
-      lowerQuery.split(' ').some((word) =>
-        note.content.toLowerCase().includes(word)
-      )
-    ) {
-      results.push({
-        noteId: note.id,
-        relevance: 0.8 + Math.random() * 0.2,
-        excerpt: note.content.substring(0, 100),
-        highlights: [note.content.substring(0, 50)],
-        matchType: 'hybrid',
-        createdAt: note.date,
-      })
-    }
-  }
-
-  // If no matches, return some generic results
-  if (results.length === 0) {
-    results.push({
-      noteId: '0',
-      relevance: 0.5,
-      excerpt: `No exact matches found for "${query}". Try different keywords.`,
-      highlights: [],
-      matchType: 'keyword',
-      createdAt: new Date().toISOString().split('T')[0],
-    })
-  }
-
-  return results.slice(0, limit)
+// Deserialize embedding from Buffer to number array
+function deserializeEmbedding(buffer: Buffer): number[] {
+  const floats = new Float32Array(buffer.buffer, buffer.byteOffset, buffer.length / 4)
+  return Array.from(floats)
 }

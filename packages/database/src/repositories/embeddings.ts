@@ -112,4 +112,22 @@ export const embeddingsRepository = {
   async count(): Promise<number> {
     return prisma.embedding.count()
   },
+
+  async findByNoteIds(
+    noteIds: string[]
+  ): Promise<Array<{ noteId: string; vector: Buffer }>> {
+    if (noteIds.length === 0) return []
+
+    const embeddings = await prisma.embedding.findMany({
+      where: {
+        noteId: { in: noteIds },
+      },
+      select: {
+        noteId: true,
+        vector: true,
+      },
+    })
+
+    return embeddings
+  },
 }
