@@ -1,7 +1,7 @@
 # Product Requirements Document (PRD)
-# Second Brain - AI-Powered Intelligent Note-Taking System
+# CoBrain - AI-Powered Intelligent Note-Taking System
 
-**Document Version:** 1.0
+**Document Version:** 1.1
 **Last Updated:** 2026-02-02
 **Status:** Draft
 **Author:** Product Team
@@ -11,7 +11,7 @@
 ## 1. Executive Summary
 
 ### 1.1 Product Vision
-Second Brain is a next-generation AI-powered note-taking application that transcends traditional Personal Knowledge Management (PKM) systems. Unlike conventional note-taking apps that require users to manually organize information into static pages and folders, Second Brain functions as a true cognitive extension—automatically organizing information, proactively surfacing relevant knowledge, and engaging users through natural language interactions.
+CoBrain is a next-generation AI-powered note-taking application that transcends traditional Personal Knowledge Management (PKM) systems. Unlike conventional note-taking apps that require users to manually organize information into static pages and folders, CoBrain functions as a true cognitive extension—automatically organizing information, proactively surfacing relevant knowledge, and engaging users through natural language interactions.
 
 ### 1.2 Problem Statement
 Current note-taking applications suffer from fundamental limitations:
@@ -22,7 +22,7 @@ Current note-taking applications suffer from fundamental limitations:
 - **Context Switching:** Users must actively remember to check their notes at the right moments
 
 ### 1.3 Solution Overview
-Second Brain eliminates these pain points by:
+CoBrain eliminates these pain points by:
 - **Zero-Organization Input:** Users simply input thoughts, tasks, and information without any structural consideration
 - **AI-Powered Auto-Organization:** Internal graph-based data structures automatically organize and connect information
 - **Conversational Interface:** Natural language queries replace manual searching
@@ -48,7 +48,7 @@ Second Brain eliminates these pain points by:
 - **Market Position:** Power users and knowledge workers seeking privacy and flexibility
 
 **Logseq**
-- **Strengths:** Outliner-based, open-source, privacy-focused, bidirectional links
+- **Strengths:** Outliner-based, open-source (AGPL), privacy-focused, bidirectional links
 - **Weaknesses:** Manual structuring required, limited AI capabilities
 - **Market Position:** Privacy-conscious users and open-source advocates
 
@@ -350,72 +350,24 @@ According to industry analysis, the 2026 second brain software landscape demands
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 6.2 Technology Stack Options
+### 6.2 Technology Stack (Hybrid Approach - Recommended)
 
-**Option A: Cloud-First, Maximum Features**
-- **Frontend:** Next.js (React), React Native (mobile)
-- **Backend:** Node.js/Python FastAPI
-- **Graph DB:** Neo4j or DGraph
-- **Vector DB:** Pinecone or Weaviate
-- **LLM:** OpenAI GPT-4 or Anthropic Claude API
-- **Hosting:** Vercel + AWS/GCP
-- **Pros:** Fast development, powerful AI, managed services
-- **Cons:** Privacy concerns, ongoing API costs, requires internet
+- **Frontend:** Next.js 15 (React 19), React Native (mobile), Electron (desktop)
+- **Backend:** Node.js + Fastify or Python + FastAPI
+- **Graph DB:** Neo4j (cloud) or SQLite with graph extensions (local)
+- **Vector DB:** Pinecone (cloud) or embedded FAISS/Hnswlib (local)
+- **LLM:** See Section 13 - LLM Provider Abstraction
+- **Sync:** CRDTs for offline-first, WebSockets for real-time
+- **Hosting:** Vercel (web), Railway/Fly.io (API)
 
-**Option B: Local-First, Privacy-Focused**
-- **Frontend:** Electron + React, React Native
-- **Backend:** Embedded Rust/Go services
-- **Graph DB:** SQLite with graph extensions or embedded DGraph
-- **Vector DB:** Embedded vector search (FAISS, Hnswlib)
-- **LLM:** Local models (Llama, Mistral via Ollama)
-- **Sync:** CRDTs, peer-to-peer or optional cloud
-- **Pros:** Complete privacy, offline capability, no recurring costs
-- **Cons:** Slower AI, complex local deployment, larger app size
-
-**Option C: Hybrid (Recommended)**
-- Local-first architecture with optional cloud enhancement
-- Core features work 100% offline with local AI
-- Cloud sync and advanced AI features available as premium tier
-- User choice of data residency
-
-### 6.3 Data Model Considerations
+### 6.3 Data Model
 
 **Graph Structure:**
 - **Nodes:** Notes (freeform), Entities (people, projects, places), Concepts (topics)
 - **Edges:** References, Mentions, RelatedTo, PartOf, Temporal (before/after)
 - **Properties:** Content, embeddings, metadata, confidence scores
 
-**Why Graph Database:**
-- Natural fit for knowledge representation
-- Efficient relationship traversal
-- Flexible schema evolution
-- Supports complex queries (shortest path, community detection)
-
-### 6.4 AI/ML Pipeline
-
-1. **Input Processing:**
-   - Text → NLP entity extraction (people, dates, projects)
-   - Text → Embedding generation (semantic vector)
-   - Voice → Speech-to-text → same as text
-
-2. **Organization:**
-   - Vector similarity → automatic linking
-   - Topic modeling → conceptual grouping
-   - Temporal analysis → event sequencing
-
-3. **Query Processing:**
-   - Natural language → structured query (semantic parsing)
-   - Query embedding → vector search
-   - Graph traversal → result ranking
-   - LLM → natural language response generation
-
-4. **Proactive Intelligence:**
-   - Calendar integration → upcoming event detection
-   - Pattern mining → habit recognition
-   - Commitment extraction → deadline tracking
-   - Context matching → notification triggering
-
-### 6.5 Integration Requirements
+### 6.4 Integration Requirements
 
 - **Calendar:** Google Calendar, Outlook, Apple Calendar
 - **Email:** Gmail, Outlook (forward to inbox feature)
@@ -573,7 +525,7 @@ According to industry analysis, the 2026 second brain software landscape demands
 
 ---
 
-## 11. Next Steps
+## 11. Roadmap & Next Steps
 
 ### 11.1 Immediate Actions (Week 1-2)
 1. **Technical Spike:** Prototype AI entity extraction + graph linking with sample data
@@ -595,9 +547,7 @@ According to industry analysis, the 2026 second brain software landscape demands
 
 ---
 
-## 12. Appendices
-
-### 12.1 Glossary
+## 12. Glossary
 
 - **Second Brain:** External system for storing and organizing knowledge to augment human memory
 - **PKM:** Personal Knowledge Management - methodologies for capturing and organizing information
@@ -608,31 +558,175 @@ According to industry analysis, the 2026 second brain software landscape demands
 - **Static Snapshot:** Frozen point-in-time view of data
 - **Proactive Notification:** System-initiated alert based on context, not user request
 - **Semantic Search:** Search by meaning rather than exact keyword matching
-- **PARA Method:** Projects, Areas, Resources, Archive - Tiago Forte's organizational framework
-- **CODE Framework:** Capture, Organize, Distill, Express - Building a Second Brain methodology
+- **CRDT:** Conflict-free Replicated Data Type - data structure for offline-first sync
 
-### 12.2 Research Sources
+---
 
-**Competitive Analysis:**
+## 13. Feature Specification: LLM Provider Abstraction Layer
+
+### 13.1 Overview
+
+CoBrain requires a unified LLM provider abstraction (`@cobrain/core`) that enables seamless switching between multiple AI providers:
+
+- **Claude Code CLI** - Local Claude via subprocess (free for users with Claude Code installed)
+- **Ollama** - Local open-source LLMs (Llama 3, Mistral, etc.)
+- **Remote APIs** - OpenAI, Anthropic API (premium tier)
+
+This is a foundational feature powering all AI capabilities: entity extraction, conversational search, and knowledge graph building.
+
+### 13.2 Problem Statement
+
+**User Pain Points:**
+1. Vendor lock-in to single AI provider
+2. Cost concerns with cloud APIs for frequent use
+3. Privacy requirements preventing cloud data transmission
+4. Single provider dependency creates availability issues
+
+**Developer Pain Points:**
+1. Fragmented APIs across providers
+2. Inconsistent streaming implementations
+3. Provider-specific error handling
+4. Testing difficulty without abstraction
+
+### 13.3 Goals
+
+| Goal | Target |
+|------|--------|
+| Provider switch time | < 1 line of code change |
+| Streaming latency overhead | < 10ms vs direct API |
+| Test coverage | > 90% |
+| TypeScript strict mode | 100% compliant |
+| Runtime dependencies | Zero |
+
+### 13.4 Core Interface
+
+```typescript
+interface ILLMProvider {
+  readonly id: string
+  readonly type: ProviderType
+  readonly isInitialized: boolean
+  readonly capabilities: ProviderCapabilities
+
+  initialize(): Promise<void>
+  complete(messages: LLMMessage[], options?: CompletionOptions): Promise<LLMResponse>
+  stream(messages: LLMMessage[], options?: CompletionOptions): AsyncGenerator<LLMStreamChunk, LLMResponse>
+  healthCheck(): Promise<HealthCheckResult>
+  dispose(): Promise<void>
+}
+
+type ProviderType = 'claude-cli' | 'ollama' | 'openai' | 'anthropic'
+```
+
+### 13.5 Provider Specifications
+
+| Provider | Description | Priority | Complexity |
+|----------|-------------|----------|------------|
+| **Ollama** | Local LLM via HTTP API (localhost:11434) | P0 | Medium |
+| **Claude CLI** | Local Claude via subprocess | P0 | High |
+| **OpenAI** | Cloud API (GPT-4o, GPT-4o-mini) | P1 | Medium |
+| **Anthropic** | Cloud API (Claude 3.5 Sonnet, Opus) | P1 | Medium |
+
+### 13.6 User Stories
+
+**US-LLM-1: Local AI Usage**
+- As a privacy-conscious user, I want to use Ollama for all AI processing, so my data never leaves my device.
+- **Acceptance:** Ollama auto-detected, works offline, clear error if not installed
+
+**US-LLM-2: Claude Code CLI Usage**
+- As a developer with Claude Code installed, I want CoBrain to use my existing subscription.
+- **Acceptance:** CLI auto-detected, uses existing auth, streaming responses
+
+**US-LLM-3: Premium Cloud AI**
+- As a premium subscriber, I want faster AI responses via cloud APIs.
+- **Acceptance:** OpenAI/Anthropic supported, secure key storage, usage tracking
+
+**US-LLM-4: Provider Selection**
+- As a user, I want to choose which AI provider to use.
+- **Acceptance:** Settings UI shows providers, health status, one-click switching
+
+### 13.7 Technical Requirements
+
+| ID | Requirement |
+|----|-------------|
+| FR-1 | Unified interface for all LLM providers |
+| FR-2 | Streaming responses via AsyncGenerator |
+| FR-3 | Detect Ollama on localhost:11434 |
+| FR-4 | Detect Claude CLI installation |
+| FR-5 | Validate API keys before requests |
+| FR-6 | Track token usage per request |
+| FR-7 | Health check for each provider |
+| FR-8 | Request cancellation via AbortSignal |
+| FR-9 | Normalize errors to consistent types |
+
+### 13.8 Security Requirements
+
+| ID | Requirement |
+|----|-------------|
+| SR-1 | API keys must not be logged or exposed in errors |
+| SR-2 | API keys stored encrypted at rest |
+| SR-3 | Subprocess execution validates command paths |
+| SR-4 | HTTPS for all remote API requests |
+| SR-5 | Rate limiting respected to prevent API bans |
+
+### 13.9 Competitive Analysis: LLM SDKs
+
+| Feature | CoBrain | Vercel AI SDK | LangChain | LiteLLM |
+|---------|---------|---------------|-----------|---------|
+| TypeScript-first | Yes | Yes | Partial | No (Python) |
+| **Claude CLI Support** | **Yes** | No | No | No |
+| Ollama Support | Yes | Yes | Yes | Yes |
+| Zero Dependencies | Yes | No | No | No |
+| Bundle Size | < 20KB | 34KB | 101KB | N/A |
+| Edge Runtime | Yes | Yes | No | No |
+| React Hooks | Yes | Yes | Partial | No |
+| Health Checks | Yes | No | No | Yes |
+
+**Key Differentiator:** CoBrain is the only SDK supporting Claude Code CLI for free local Claude access.
+
+### 13.10 Implementation Phases
+
+**Phase 1:** Package setup, type definitions, BaseProvider class, error classes
+**Phase 2:** OllamaProvider, ClaudeCliProvider, OpenAIProvider, AnthropicProvider
+**Phase 3:** ProviderRegistry, ProviderFactory, global singleton
+**Phase 4:** React hooks (useProvider, useCompletion), documentation
+**Phase 5:** Unit tests, integration tests, benchmarks
+
+### 13.11 GitHub Issues
+
+1. **[INFRA] Set up @cobrain/core package** - package.json, tsconfig, tsup build
+2. **[TYPES] Define LLM provider type system** - All TypeScript interfaces
+3. **[CORE] Implement BaseProvider abstract class** - Common functionality
+4. **[PROVIDER] Implement OllamaProvider** - Local LLM via HTTP API
+5. **[PROVIDER] Implement ClaudeCliProvider** - Claude Code CLI subprocess
+6. **[PROVIDER] Implement OpenAIProvider** - OpenAI API integration
+7. **[PROVIDER] Implement AnthropicProvider** - Anthropic API integration
+8. **[CORE] Implement ProviderRegistry** - Central provider management
+9. **[CORE] Implement ProviderFactory** - Config-based creation
+10. **[REACT] Add React hooks** - useProvider, useCompletion
+11. **[TEST] Add comprehensive test suite** - Unit + integration tests
+
+---
+
+## 14. Research Sources
+
+### 14.1 Competitive Analysis - PKM Apps
 - [Top 10 Obsidian Alternatives 2026](https://buildin.ai/blog/top-10-obsidian-alternatives)
-- [Best Obsidian Alternatives in 2026](https://toolfinder.co/alternatives/obsidian)
 - [5 Best Second Brain Apps 2026 Ranked](https://affine.pro/blog/best-second-brain-apps)
-- [The second brain apps that will redefine thinking in 2026](https://radiantapp.com/blog/best-second-brain-apps)
-- [21 Best Second Brain Apps for Personal Knowledge Management](https://www.kosmik.app/blog/best-second-brain-apps)
-- [I tried 5 Obsidian alternatives](https://www.eesel.ai/blog/obsidian-alternatives)
-
-**AI-Powered Note Apps:**
 - [Introducing Mem 2.0: The World's First AI Thought Partner](https://get.mem.ai/blog/introducing-mem-2-0)
-- [Mem AI Review](https://aitoolinsight.com/mem-ai/)
-- [Top 10 Mem Alternatives for Effortless Note-Taking in 2026](https://www.remio.ai/post/top-10-mem-alternatives-for-note-taking-in-2026)
 
-**Second Brain Methodology:**
+### 14.2 Second Brain Methodology
 - [Building a Second Brain](https://buildingasecondbrain.com/)
-- [Building a Second Brain: An Interview with Tiago Forte](https://bulletjournal.com/blogs/bulletjournalist/building-a-second-brain-an-interview-with-tiago-forte)
 - [Building a Second Brain: The Illustrated Notes](https://maggieappleton.com/basb)
-- [How to Build a Second Brain: Complete Guide](https://mindfulbytes.blog/how-to-build-a-second-brain-a-complete-guide-to-tiago-fortes-personal-knowledge-management-method)
 
-### 12.3 Feature Priority Matrix
+### 14.3 LLM SDKs & Abstraction
+- [Vercel AI SDK 6](https://vercel.com/blog/ai-sdk-6)
+- [LangChain vs Vercel AI SDK Comparison](https://strapi.io/blog/langchain-vs-vercel-ai-sdk-vs-openai-sdk-comparison-guide)
+- [Ollama JavaScript Library](https://github.com/ollama/ollama-js)
+- [Claude Code Headless Mode](https://code.claude.com/docs/en/headless)
+
+---
+
+## 15. Feature Priority Matrix
 
 | Feature Category | Must Have (P0) | Should Have (P1) | Nice to Have (P2) |
 |-----------------|----------------|------------------|-------------------|
@@ -642,6 +736,7 @@ According to industry analysis, the 2026 second brain software landscape demands
 | **Proactive** | Time reminders, Commitment tracking | Context triggers | Habit suggestions |
 | **Views** | Basic lists | Dynamic views, Static snapshots | Custom templates, Sharing |
 | **Platform** | Web app | Desktop, Mobile | Browser extension, Wearables |
+| **AI Providers** | Ollama, Claude CLI | OpenAI, Anthropic | Google, Azure, Custom |
 
 ---
 
