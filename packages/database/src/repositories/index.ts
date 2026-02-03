@@ -17,3 +17,12 @@ export type { CreateReminderInput, UpdateReminderInput } from './reminders.js'
 
 export { embeddingsRepository } from './embeddings.js'
 export type { StoreEmbeddingInput, SimilarResult } from './embeddings.js'
+
+export { graphRepository } from './graph.js'
+export type {
+  GraphNode,
+  GraphPath,
+  GraphNeighborhood,
+  GraphStats,
+  TraversalOptions,
+} from './graph.js'
