@@ -26,3 +26,15 @@ export type {
   GraphStats,
   TraversalOptions,
 } from './graph.js'
+
+export { viewsRepository } from './views.js'
+export type {
+  View,
+  ViewSnapshot,
+  ViewQuery,
+  ViewSettings,
+  ViewLayout,
+  ViewType,
+  CreateViewInput,
+  UpdateViewInput,
+} from './views.js'

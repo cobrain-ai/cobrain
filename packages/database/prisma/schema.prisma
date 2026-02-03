@@ -196,6 +196,46 @@ model Reminder {
 }
 
 // ============================================
+// Dynamic Views
+// ============================================
+
+model View {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  type        String   @default("custom") // custom, projects, tasks, people, timeline, etc.
+  query       Json     // Filter/query definition
+  layout      String   @default("list") // list, grid, timeline, kanban, graph
+  settings    Json     @default("{}") // View-specific settings (sort, group, etc.)
+  isShared    Boolean  @default(false)
+  shareToken  String?  @unique
+  isPinned    Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  snapshots   ViewSnapshot[]
+
+  @@index([userId])
+  @@index([shareToken])
+  @@map("views")
+}
+
+model ViewSnapshot {
+  id        String   @id @default(uuid())
+  viewId    String
+  name      String?
+  data      Json     // Frozen view data at this point
+  createdAt DateTime @default(now())
+
+  view View @relation(fields: [viewId], references: [id], onDelete: Cascade)
+
+  @@index([viewId])
+  @@map("view_snapshots")
+}
+
+// ============================================
 // Sync & Offline Support (Future)
 // ============================================
 
