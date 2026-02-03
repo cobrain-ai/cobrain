@@ -1,48 +1,85 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 interface Note {
   id: string
   content: string
-  createdAt: Date
-  isPinned: boolean
+  createdAt: string
+  metadata?: {
+    isPinned?: boolean
+    isArchived?: boolean
+  }
 }
 
-// Mock data for UI development
-const mockNotes: Note[] = [
-  {
-    id: '1',
-    content: 'Remember to review the quarterly report with Sarah on Monday',
-    createdAt: new Date('2026-02-03T10:00:00'),
-    isPinned: true,
-  },
-  {
-    id: '2',
-    content: 'Ideas for the new product launch:\n- Focus on AI features\n- Target early adopters\n- Partner with tech influencers',
-    createdAt: new Date('2026-02-02T15:30:00'),
-    isPinned: false,
-  },
-  {
-    id: '3',
-    content: 'Meeting notes from the team standup:\n- Backend API is ready\n- Frontend needs 2 more days\n- Launch planned for Friday',
-    createdAt: new Date('2026-02-01T09:00:00'),
-    isPinned: false,
-  },
-]
+interface NotesResponse {
+  notes: Note[]
+  total: number
+}
 
 export default function NotesPage() {
-  const [notes] = useState<Note[]>(mockNotes)
+  const [notes, setNotes] = useState<Note[]>([])
+  const [total, setTotal] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [filter, setFilter] = useState<'all' | 'pinned'>('all')
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchNotes = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const params = new URLSearchParams()
+      if (searchQuery) {
+        params.set('search', searchQuery)
+      }
+
+      const response = await fetch(`/api/notes?${params.toString()}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch notes')
+      }
+
+      const data: NotesResponse = await response.json()
+      setNotes(data.notes)
+      setTotal(data.total)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [searchQuery])
+
+  useEffect(() => {
+    fetchNotes()
+  }, [fetchNotes])
+
+  const handleDelete = async (noteId: string) => {
+    if (!confirm('Are you sure you want to delete this note?')) return
+
+    try {
+      const response = await fetch(`/api/notes/${noteId}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        setNotes((prev) => prev.filter((n) => n.id !== noteId))
+        setTotal((prev) => prev - 1)
+      }
+    } catch (err) {
+      console.error('Failed to delete note:', err)
+    }
+  }
 
   const filteredNotes = notes.filter((note) => {
-    const matchesSearch = note.content.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesFilter = filter === 'all' || note.isPinned
-    return matchesSearch && matchesFilter
+    if (filter === 'pinned') {
+      return note.metadata?.isPinned
+    }
+    return true
   })
 
-  const formatDate = (date: Date) => {
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr)
     const now = new Date()
     const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
 
@@ -52,12 +89,41 @@ export default function NotesPage() {
     return date.toLocaleDateString()
   }
 
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 dark:bg-gray-800 rounded w-1/3" />
+          <div className="h-12 bg-gray-200 dark:bg-gray-800 rounded" />
+          <div className="h-32 bg-gray-200 dark:bg-gray-800 rounded" />
+          <div className="h-32 bg-gray-200 dark:bg-gray-800 rounded" />
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center py-12">
+          <p className="text-red-500 mb-4">{error}</p>
+          <button
+            onClick={fetchNotes}
+            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Your Notes</h1>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">{filteredNotes.length} notes</span>
+          <span className="text-sm text-gray-500">{total} notes</span>
         </div>
       </div>
 
@@ -106,7 +172,7 @@ export default function NotesPage() {
             href="/capture"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
           >
-            ✨ Create your first note
+            Create your first note
           </a>
         </div>
       ) : (
@@ -114,7 +180,7 @@ export default function NotesPage() {
           {filteredNotes.map((note) => (
             <article
               key={note.id}
-              className="p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:shadow-md transition-shadow cursor-pointer"
+              className="p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
@@ -122,7 +188,7 @@ export default function NotesPage() {
                     {note.content}
                   </p>
                 </div>
-                {note.isPinned && (
+                {note.metadata?.isPinned && (
                   <span className="flex-shrink-0" title="Pinned">
                     📌
                   </span>
@@ -131,12 +197,7 @@ export default function NotesPage() {
               <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
                 <span>{formatDate(note.createdAt)}</span>
                 <button
-                  className="hover:text-blue-600 transition-colors"
-                  aria-label="Edit note"
-                >
-                  Edit
-                </button>
-                <button
+                  onClick={() => handleDelete(note.id)}
                   className="hover:text-red-600 transition-colors"
                   aria-label="Delete note"
                 >

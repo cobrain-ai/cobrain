@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { z } from 'zod'
-import { notesRepository } from '@cobrain/database'
+import { remindersRepository } from '@cobrain/database'
 
-const createNoteSchema = z.object({
-  content: z.string().min(1, 'Content is required'),
-  source: z.enum(['text', 'voice', 'import']).optional().default('text'),
+const createReminderSchema = z.object({
+  noteId: z.string().uuid(),
+  message: z.string().min(1),
+  triggerAt: z.string().datetime(),
+  type: z.enum(['time', 'commitment', 'follow_up']).optional(),
 })
 
 export async function POST(request: Request) {
@@ -17,7 +19,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const result = createNoteSchema.safeParse(body)
+    const result = createReminderSchema.safeParse(body)
 
     if (!result.success) {
       return NextResponse.json(
@@ -26,22 +28,19 @@ export async function POST(request: Request) {
       )
     }
 
-    const { content, source } = result.data
+    const { noteId, message, triggerAt, type } = result.data
 
-    // Save to database
-    const note = await notesRepository.create({
-      content,
-      source,
+    const reminder = await remindersRepository.create({
+      noteId,
       userId: session.user.id,
+      message,
+      triggerAt: new Date(triggerAt),
+      type,
     })
 
-    // TODO: Extract entities in background
-    // This would typically be done with a background job queue
-    // For now, entity extraction happens on-demand
-
-    return NextResponse.json({ note }, { status: 201 })
+    return NextResponse.json({ reminder }, { status: 201 })
   } catch (error) {
-    console.error('Create note error:', error)
+    console.error('Create reminder error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -58,23 +57,19 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url)
+    const status = searchParams.get('status') as 'pending' | 'completed' | 'triggered' | 'dismissed' | null
     const limit = parseInt(searchParams.get('limit') ?? '50', 10)
-    const offset = parseInt(searchParams.get('offset') ?? '0', 10)
-    const search = searchParams.get('search') ?? undefined
 
-    // Fetch from database
-    const notes = await notesRepository.findByUser({
-      userId: session.user.id,
+    const reminders = await remindersRepository.findByUser(session.user.id, {
+      status: status ?? undefined,
       limit,
-      offset,
-      search,
     })
 
-    const total = await notesRepository.count(session.user.id)
+    const count = await remindersRepository.countPending(session.user.id)
 
-    return NextResponse.json({ notes, total, limit, offset })
+    return NextResponse.json({ reminders, pendingCount: count })
   } catch (error) {
-    console.error('Get notes error:', error)
+    console.error('Get reminders error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -1,25 +1,60 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { TextInput } from '@/components/capture'
+import { TextInput, VoiceInput } from '@/components/capture'
+
+interface SavedNote {
+  id: string
+  content: string
+  source: 'text' | 'voice'
+}
 
 export default function CapturePage() {
-  const [recentNotes, setRecentNotes] = useState<string[]>([])
+  const [recentNotes, setRecentNotes] = useState<SavedNote[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [pendingVoiceTranscript, setPendingVoiceTranscript] = useState<string | null>(null)
 
-  const handleSave = useCallback(async (content: string) => {
-    // TODO: Save to database via API
-    console.log('Saving note:', content)
+  const handleSave = useCallback(async (content: string, source: 'text' | 'voice' = 'text') => {
+    setError(null)
 
-    // For now, just add to local state
-    setRecentNotes((prev) => [content, ...prev].slice(0, 5))
+    try {
+      const response = await fetch('/api/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, source }),
+      })
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500))
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to save note')
+      }
+
+      const { note } = await response.json()
+      setRecentNotes((prev) => [{ id: note.id, content, source }, ...prev].slice(0, 5))
+      setPendingVoiceTranscript(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
+      throw err
+    }
   }, [])
 
-  const handleAutoSave = useCallback((content: string) => {
-    // Auto-save draft to localStorage (handled in component)
-    console.log('Auto-saving draft:', content.substring(0, 50) + '...')
+  const handleTextSave = useCallback(async (content: string) => {
+    return handleSave(content, 'text')
+  }, [handleSave])
+
+  const handleVoiceTranscript = useCallback((transcript: string) => {
+    // Set the transcript as pending, user can edit before saving
+    setPendingVoiceTranscript(transcript)
+  }, [])
+
+  const handleVoiceSave = useCallback(async () => {
+    if (pendingVoiceTranscript) {
+      await handleSave(pendingVoiceTranscript, 'voice')
+    }
+  }, [pendingVoiceTranscript, handleSave])
+
+  const handleVoiceError = useCallback((errorMsg: string) => {
+    setError(errorMsg)
   }, [])
 
   return (
@@ -31,26 +66,63 @@ export default function CapturePage() {
         </p>
       </div>
 
+      {error && (
+        <div className="mb-4 p-4 rounded-lg bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400">
+          {error}
+          <button
+            onClick={() => setError(null)}
+            className="ml-2 underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       <TextInput
-        onSave={handleSave}
-        onAutoSave={handleAutoSave}
+        initialValue={pendingVoiceTranscript ?? ''}
+        onSave={handleTextSave}
         minRows={4}
         maxRows={15}
       />
 
-      {/* Voice Input Button */}
-      <div className="mt-4 flex items-center gap-4">
-        <button
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
-          aria-label="Voice input"
-        >
-          <span>🎤</span>
-          <span className="text-sm">Voice Input</span>
-        </button>
-        <span className="text-xs text-gray-400">
-          Coming soon: Speak your thoughts
-        </span>
+      {/* Voice Input */}
+      <div className="mt-4">
+        <VoiceInput
+          onTranscript={handleVoiceTranscript}
+          onError={handleVoiceError}
+        />
       </div>
+
+      {/* Voice transcript preview with save option */}
+      {pendingVoiceTranscript && (
+        <div className="mt-4 p-4 rounded-lg border-2 border-blue-500 bg-blue-50 dark:bg-blue-900/20">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+              Voice transcript ready to save:
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPendingVoiceTranscript(null)}
+                className="text-sm text-gray-500 hover:text-gray-700"
+              >
+                Discard
+              </button>
+              <button
+                onClick={handleVoiceSave}
+                className="text-sm px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+          <p className="text-gray-700 dark:text-gray-300">
+            {pendingVoiceTranscript}
+          </p>
+          <p className="mt-2 text-xs text-gray-500">
+            You can also edit the transcript in the text input above before saving.
+          </p>
+        </div>
+      )}
 
       {/* Quick Tips */}
       <div className="mt-12 p-6 rounded-xl bg-gray-100 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
@@ -78,12 +150,19 @@ export default function CapturePage() {
             Recently Captured
           </h2>
           <div className="space-y-2">
-            {recentNotes.map((note, i) => (
+            {recentNotes.map((note) => (
               <div
-                key={i}
-                className="p-3 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-sm text-gray-600 dark:text-gray-400 truncate"
+                key={note.id}
+                className="p-3 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800"
               >
-                {note}
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500">
+                    {note.source === 'voice' ? '🎤 Voice' : '⌨️ Text'}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                  {note.content}
+                </p>
               </div>
             ))}
           </div>

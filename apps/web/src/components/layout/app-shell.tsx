@@ -5,6 +5,7 @@ import { LayoutProvider } from '@/contexts/layout-context'
 import { ThemeProvider } from '@/contexts/theme-context'
 import { Sidebar } from './sidebar'
 import { Header } from './header'
+import { QuickCapture } from '@/components/capture'
 
 interface AppShellProps {
   children: ReactNode
@@ -22,6 +23,7 @@ export function AppShell({ children }: AppShellProps) {
               {children}
             </main>
           </div>
+          <QuickCapture />
         </div>
       </LayoutProvider>
     </ThemeProvider>

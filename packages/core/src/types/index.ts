@@ -1,18 +1,65 @@
 // LLM Provider Types
 
-export interface LLMMessage {
-  role: 'system' | 'user' | 'assistant'
-  content: string
+// Provider type identifiers
+export type ProviderType = 'ollama' | 'claude-cli' | 'openai' | 'anthropic'
+
+// Message types
+export type MessageRole = 'system' | 'user' | 'assistant'
+
+export interface ContentBlock {
+  type: 'text' | 'image'
+  text?: string
+  imageUrl?: string
 }
 
+export interface LLMMessage {
+  role: MessageRole
+  content: string | ContentBlock[]
+}
+
+// Completion options
 export interface LLMCompletionOptions {
+  model?: string
   temperature?: number
   maxTokens?: number
   topP?: number
   stop?: string[]
   stream?: boolean
+  signal?: AbortSignal
 }
 
+// Token usage tracking
+export interface TokenUsage {
+  inputTokens: number
+  outputTokens: number
+  totalTokens: number
+}
+
+// Finish reasons
+export type FinishReason = 'stop' | 'length' | 'content_filter' | 'tool_calls' | 'error'
+
+// Response types
+export interface LLMResponse {
+  id: string
+  provider: ProviderType
+  model: string
+  content: string
+  contentBlocks?: ContentBlock[]
+  usage: TokenUsage
+  finishReason: FinishReason
+  latencyMs: number
+}
+
+export interface LLMStreamChunk {
+  id: string
+  index: number
+  content: string
+  delta?: { text?: string }
+  done: boolean
+  finishReason?: FinishReason
+}
+
+// Legacy compatibility alias
 export interface LLMCompletionResult {
   content: string
   model: string
@@ -21,32 +68,105 @@ export interface LLMCompletionResult {
     completionTokens: number
     totalTokens: number
   }
-  finishReason?: 'stop' | 'length' | 'content_filter' | 'tool_calls'
+  finishReason?: FinishReason
 }
 
-export interface LLMStreamChunk {
-  content: string
-  done: boolean
+// Provider capabilities
+export interface ProviderCapabilities {
+  streaming: boolean
+  functionCalling: boolean
+  vision: boolean
+  maxTokens: number
+  models: string[]
 }
 
+// Health check result
+export interface HealthCheckResult {
+  healthy: boolean
+  latencyMs: number
+  message?: string
+  models?: string[]
+}
+
+// Provider interface
 export interface LLMProvider {
-  name: string
+  readonly id: string
+  readonly type: ProviderType
+  readonly name: string
+  readonly capabilities: ProviderCapabilities
+  readonly isInitialized: boolean
+
+  initialize(): Promise<void>
   isAvailable(): Promise<boolean>
   complete(
     messages: LLMMessage[],
     options?: LLMCompletionOptions
-  ): Promise<LLMCompletionResult>
-  stream?(
+  ): Promise<LLMResponse>
+  stream(
     messages: LLMMessage[],
     options?: LLMCompletionOptions
   ): AsyncIterable<LLMStreamChunk>
+  healthCheck(): Promise<HealthCheckResult>
+  dispose(): Promise<void>
 }
 
+// Base provider config
 export interface LLMProviderConfig {
+  type?: ProviderType
+  enabled?: boolean
   apiKey?: string
   baseUrl?: string
   model?: string
   timeout?: number
+  maxRetries?: number
+}
+
+// Provider-specific configs
+export interface OllamaConfig extends LLMProviderConfig {
+  type: 'ollama'
+  baseUrl: string
+  defaultModel: string
+}
+
+export interface ClaudeCliConfig extends LLMProviderConfig {
+  type: 'claude-cli'
+  cliPath?: string
+  defaultModel?: string
+}
+
+export interface OpenAIConfig extends LLMProviderConfig {
+  type: 'openai'
+  apiKey: string
+  defaultModel?: string
+}
+
+export interface AnthropicConfig extends LLMProviderConfig {
+  type: 'anthropic'
+  apiKey: string
+  defaultModel?: string
+}
+
+export type ProviderConfig = OllamaConfig | ClaudeCliConfig | OpenAIConfig | AnthropicConfig
+
+// Error types
+export type LLMErrorCode =
+  | 'PROVIDER_NOT_AVAILABLE'
+  | 'AUTHENTICATION_FAILED'
+  | 'RATE_LIMITED'
+  | 'INVALID_REQUEST'
+  | 'NETWORK_ERROR'
+  | 'TIMEOUT'
+  | 'UNKNOWN'
+
+export class LLMError extends Error {
+  constructor(
+    public readonly code: LLMErrorCode,
+    message: string,
+    public readonly cause?: Error
+  ) {
+    super(message)
+    this.name = 'LLMError'
+  }
 }
 
 // Entity Types for Knowledge Graph

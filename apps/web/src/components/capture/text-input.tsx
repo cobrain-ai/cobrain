@@ -68,6 +68,7 @@ export function TextInput({
 
   // LocalStorage fallback for offline
   useEffect(() => {
+    if (typeof window === 'undefined') return
     if (content.trim()) {
       localStorage.setItem('cobrain-draft', content)
     }
@@ -75,6 +76,7 @@ export function TextInput({
 
   // Restore draft on mount
   useEffect(() => {
+    if (typeof window === 'undefined') return
     if (!initialValue) {
       const draft = localStorage.getItem('cobrain-draft')
       if (draft) {
@@ -90,7 +92,9 @@ export function TextInput({
     try {
       await onSave(content)
       setContent('')
-      localStorage.removeItem('cobrain-draft')
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('cobrain-draft')
+      }
       setLastSaved(new Date())
     } catch (error) {
       console.error('Failed to save note:', error)
@@ -185,7 +189,7 @@ export function TextInput({
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-400">
             <kbd className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 font-mono">
-              {navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl'}
+              {typeof navigator !== 'undefined' && navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl'}
             </kbd>
             {' + '}
             <kbd className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 font-mono">
