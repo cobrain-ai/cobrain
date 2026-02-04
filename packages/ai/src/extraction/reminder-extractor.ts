@@ -58,47 +58,45 @@ export function extractBasicReminders(text: string): ExtractedReminder[] {
   const now = new Date()
 
   // Pattern: "remind me to X at Y" or "reminder: X"
-  const remindPattern = /remind(?:er)?(?:\s+me)?\s+(?:to\s+)?(.+?)(?:\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?)?(?:\s+(?:on\s+)?(tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday))?/gi
+  // First, match the full pattern to extract time/day components
+  const remindPatternWithTime = /remind(?:er)?(?:\s+me)?\s+(?:to\s+)?(.+?)\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?(?:\s+(?:on\s+)?(tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday))?/gi
+  const remindPatternWithDay = /remind(?:er)?(?:\s+me)?\s+(?:to\s+)?(.+?)\s+(?:on\s+)?(tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?!\s+at\s+\d)/gi
+  const remindPatternSimple = /remind(?:er)?(?:\s+me)?\s+(?:to\s+)?([^.!?\n]+?)(?:\.|!|\?|$)/gi
 
   let match
-  while ((match = remindPattern.exec(text)) !== null) {
+
+  // First try pattern with time
+  while ((match = remindPatternWithTime.exec(text)) !== null) {
     const message = match[1]?.trim()
-    if (!message) continue
+    if (!message || message.length < 2) continue
 
     let triggerAt: Date | null = null
 
-    // Parse time if provided
-    if (match[2]) {
-      let hours = parseInt(match[2], 10)
-      const minutes = match[3] ? parseInt(match[3], 10) : 0
-      const meridiem = match[4]?.toLowerCase()
+    // Parse time
+    let hours = parseInt(match[2], 10)
+    const minutes = match[3] ? parseInt(match[3], 10) : 0
+    const meridiem = match[4]?.toLowerCase()
 
-      if (meridiem === 'pm' && hours < 12) hours += 12
-      if (meridiem === 'am' && hours === 12) hours = 0
+    if (meridiem === 'pm' && hours < 12) hours += 12
+    if (meridiem === 'am' && hours === 12) hours = 0
 
-      triggerAt = new Date(now)
-      triggerAt.setHours(hours, minutes, 0, 0)
+    triggerAt = new Date(now)
+    triggerAt.setHours(hours, minutes, 0, 0)
 
-      // If time has passed today, set for tomorrow
-      if (triggerAt < now) {
-        triggerAt.setDate(triggerAt.getDate() + 1)
-      }
+    // If time has passed today, set for tomorrow
+    if (triggerAt < now) {
+      triggerAt.setDate(triggerAt.getDate() + 1)
     }
 
     // Parse day if provided
     if (match[5]) {
       const dayWord = match[5].toLowerCase()
       if (dayWord === 'tomorrow') {
-        if (!triggerAt) triggerAt = new Date(now)
         triggerAt.setDate(now.getDate() + 1)
-      } else if (dayWord === 'today') {
-        if (!triggerAt) triggerAt = new Date(now)
-      } else {
-        // Day of week
+      } else if (dayWord !== 'today') {
         const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
         const targetDay = days.indexOf(dayWord)
         if (targetDay !== -1) {
-          if (!triggerAt) triggerAt = new Date(now)
           const currentDay = now.getDay()
           let daysToAdd = targetDay - currentDay
           if (daysToAdd <= 0) daysToAdd += 7
@@ -112,7 +110,70 @@ export function extractBasicReminders(text: string): ExtractedReminder[] {
       message,
       triggerAt,
       type: 'time',
+      confidence: 0.9,
+      sourceText: match[0],
+      isRecurring: false,
+    })
+  }
+
+  // Then try pattern with day only (no time)
+  while ((match = remindPatternWithDay.exec(text)) !== null) {
+    const message = match[1]?.trim()
+    if (!message || message.length < 2) continue
+
+    // Skip if already captured by time pattern
+    const alreadyCaptured = reminders.some(r =>
+      r.message.toLowerCase() === message.toLowerCase()
+    )
+    if (alreadyCaptured) continue
+
+    let triggerAt: Date | null = new Date(now)
+    const dayWord = match[2].toLowerCase()
+
+    if (dayWord === 'tomorrow') {
+      triggerAt.setDate(now.getDate() + 1)
+    } else if (dayWord === 'today') {
+      // Keep as today
+    } else {
+      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+      const targetDay = days.indexOf(dayWord)
+      if (targetDay !== -1) {
+        const currentDay = now.getDay()
+        let daysToAdd = targetDay - currentDay
+        if (daysToAdd <= 0) daysToAdd += 7
+        triggerAt.setDate(now.getDate() + daysToAdd)
+      }
+    }
+
+    reminders.push({
+      id: generateId(),
+      message,
+      triggerAt,
+      type: 'time',
       confidence: 0.85,
+      sourceText: match[0],
+      isRecurring: false,
+    })
+  }
+
+  // Finally, try simple pattern for reminders without time/day
+  while ((match = remindPatternSimple.exec(text)) !== null) {
+    const message = match[1]?.trim()
+    if (!message || message.length < 2) continue
+
+    // Skip if already captured
+    const alreadyCaptured = reminders.some(r =>
+      r.message.toLowerCase().includes(message.toLowerCase()) ||
+      message.toLowerCase().includes(r.message.toLowerCase())
+    )
+    if (alreadyCaptured) continue
+
+    reminders.push({
+      id: generateId(),
+      message,
+      triggerAt: null,
+      type: 'time',
+      confidence: 0.7,
       sourceText: match[0],
       isRecurring: false,
     })
