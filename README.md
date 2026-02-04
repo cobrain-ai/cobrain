@@ -130,13 +130,13 @@ CoBrain is built as a monorepo with:
 
 ## 🗺️ Roadmap
 
-### Month 1-3: MVP (Current)
+### Month 1-3: MVP (Complete ✅)
 - [x] Project setup
-- [ ] Basic note capture UI
-- [ ] Local AI integration (Ollama)
-- [ ] Entity extraction
-- [ ] Conversational search
-- [ ] Graph visualization
+- [x] Basic note capture UI
+- [x] Local AI integration (Ollama)
+- [x] Entity extraction
+- [x] Conversational search
+- [x] Graph visualization
 
 ### Month 4-6: Desktop & Premium
 - [ ] Electron desktop app
