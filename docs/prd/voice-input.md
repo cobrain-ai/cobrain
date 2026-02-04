@@ -88,6 +88,65 @@ recognition.lang = 'en-US'          // Default language
 
 ---
 
+## Text-to-Speech (TTS) - Implemented
+
+**Status**: Implemented (Issue #45)
+**Commit**: 3c541c9
+
+### Features Implemented
+1. **TTS Controls** (`components/chat/tts-controls.tsx`)
+   - Toggle voice responses on/off
+   - Playback controls (pause, resume, stop)
+   - Settings dropdown for customization
+
+2. **Voice Settings**
+   - Rate control (0.5x - 2x)
+   - Pitch control (0.5 - 1.5)
+   - Volume control (0 - 100%)
+   - Browser voice selection
+   - Auto-read toggle for new responses
+
+3. **Integration**
+   - Integrated into chat page header
+   - Uses Web Speech API (SpeechSynthesis)
+   - Settings persisted to localStorage
+
+### Files
+- `apps/web/src/hooks/use-text-to-speech.ts` - Core TTS hook
+- `apps/web/src/components/chat/tts-controls.tsx` - UI controls
+- `apps/web/src/app/(app)/chat/page.tsx` - Integration
+
+---
+
+## Image OCR - Implemented
+
+**Status**: Implemented (Issue #45)
+**Commit**: 3c541c9
+
+### Features Implemented
+1. **Image Upload** (`components/capture/image-ocr.tsx`)
+   - Drag-and-drop support
+   - File browser button
+   - Image preview
+
+2. **OCR Processing**
+   - Uses Tesseract.js for client-side OCR
+   - Real-time progress tracking
+   - Confidence score display
+   - Processing time display
+
+3. **Memory Management**
+   - Cleanup on component unmount
+   - Worker termination
+   - Object URL revocation
+
+### Files
+- `apps/web/src/hooks/use-image-ocr.ts` - Tesseract.js integration
+- `apps/web/src/components/capture/image-ocr.tsx` - UI component
+- `apps/web/src/app/(app)/capture/page.tsx` - Integration
+
+---
+
 ## Future Enhancements (P2)
 
 - [ ] Language selection dropdown
@@ -95,6 +154,7 @@ recognition.lang = 'en-US'          // Default language
 - [ ] Voice commands ("save note", "cancel")
 - [ ] Audio waveform visualization
 - [ ] Multiple language support
+- [ ] Multiple image OCR languages
 
 ---
 

@@ -236,6 +236,23 @@ model ViewSnapshot {
 }
 
 // ============================================
+// Push Notifications
+// ============================================
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  endpoint  String   @unique
+  keys      Json     // { p256dh, auth }
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+// ============================================
 // Sync & Offline Support (Future)
 // ============================================
 

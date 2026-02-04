@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useLayout } from '@/contexts/layout-context'
 import { useTheme } from '@/contexts/theme-context'
+import { NotificationCenter } from '@/components/notifications'
 
 export function Header() {
   const { toggleSidebar, sidebarCollapsed, collapseSidebar, expandSidebar } =
@@ -82,6 +83,9 @@ export function Header() {
 
       {/* Right side actions */}
       <div className="flex items-center gap-2">
+        {/* Notifications */}
+        <NotificationCenter />
+
         {/* Theme toggle */}
         <button
           onClick={toggleTheme}

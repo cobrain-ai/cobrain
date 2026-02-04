@@ -15,7 +15,9 @@ const navItems: NavItem[] = [
   { href: '/capture', label: 'Capture', icon: '📝', shortcut: 'C' },
   { href: '/chat', label: 'Chat', icon: '💬', shortcut: 'H' },
   { href: '/notes', label: 'Notes', icon: '📋', shortcut: 'N' },
+  { href: '/views', label: 'Views', icon: '📊', shortcut: 'V' },
   { href: '/graph', label: 'Graph', icon: '🕸️', shortcut: 'G' },
+  { href: '/import', label: 'Import', icon: '📥', shortcut: 'I' },
   { href: '/settings', label: 'Settings', icon: '⚙️', shortcut: ',' },
 ]
 

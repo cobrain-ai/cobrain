@@ -10,6 +10,7 @@ import {
   QuickStatsSection,
   SetupGuidesSection,
   AboutSection,
+  PushSettings,
 } from '@/components/settings'
 
 export default function SettingsPage(): React.ReactElement {
@@ -55,6 +56,7 @@ export default function SettingsPage(): React.ReactElement {
           )}
 
           <AppearanceSection theme={theme} onThemeChange={setTheme} />
+          <NotificationsSection />
           <DataPrivacySection />
         </div>
 
@@ -118,6 +120,18 @@ function AIProvidersSection({
           />
         ))}
       </div>
+    </section>
+  )
+}
+
+function NotificationsSection(): React.ReactElement {
+  return (
+    <section className="p-6 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+      <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+        <span className="text-2xl">&#128276;</span>
+        Notifications
+      </h2>
+      <PushSettings />
     </section>
   )
 }

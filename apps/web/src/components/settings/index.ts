@@ -23,3 +23,5 @@ export type {
   DataPrivacySectionProps,
   QuickStatsSectionProps,
 } from './settings-sections'
+
+export { PushSettings } from './push-settings'
