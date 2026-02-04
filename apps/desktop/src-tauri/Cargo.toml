@@ -1,0 +1,24 @@
+[package]
+name = "cobrain-desktop"
+version = "0.1.0"
+description = "CoBrain Desktop Application"
+authors = ["CoBrain Team"]
+license = "AGPL-3.0"
+repository = "https://github.com/cobrain-ai/cobrain"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0", features = ["tray-icon", "global-shortcut", "shell-open"] }
+tauri-plugin-shell = "2.0"
+tauri-plugin-notification = "2.0"
+tauri-plugin-global-shortcut = "2.0"
+tauri-plugin-autostart = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
