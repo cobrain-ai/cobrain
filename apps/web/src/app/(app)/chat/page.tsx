@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { Volume2 } from 'lucide-react'
+import { useTextToSpeech } from '@/hooks/use-text-to-speech'
+import { TTSControls } from '@/components/chat/tts-controls'
 
 interface Message {
   id: string
@@ -37,6 +40,7 @@ export default function ChatPage() {
     'What are my upcoming meetings?',
   ])
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const tts = useTextToSpeech()
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -84,6 +88,9 @@ export default function ChatPage() {
         setMessages((prev) => [...prev, assistantMessage])
         setConversationId(data.conversationId)
         setSuggestedFollowups(data.suggestedFollowups)
+
+        // Auto-read the response if TTS is enabled
+        tts.autoRead(data.answer)
       } catch (error) {
         console.error('Chat error:', error)
         const errorMessage: Message = {
@@ -98,7 +105,17 @@ export default function ChatPage() {
         setIsLoading(false)
       }
     },
-    [conversationId, isLoading]
+    [conversationId, isLoading, tts]
+  )
+
+  // Speak a specific message
+  const speakMessage = useCallback(
+    (content: string) => {
+      if (tts.isSupported && tts.settings.enabled) {
+        tts.speak(content)
+      }
+    },
+    [tts]
   )
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -113,11 +130,14 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-full max-w-3xl mx-auto">
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold">Chat with Your Notes</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Ask questions in natural language to search and understand your notes
-        </p>
+      <div className="mb-4 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Chat with Your Notes</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Ask questions in natural language to search and understand your notes
+          </p>
+        </div>
+        <TTSControls tts={tts} />
       </div>
 
       {/* Messages */}
@@ -153,18 +173,31 @@ export default function ChatPage() {
                 </div>
               )}
 
-              <p
-                className={`text-xs mt-2 ${
-                  message.role === 'user'
-                    ? 'text-blue-200'
-                    : 'text-gray-500 dark:text-gray-400'
-                }`}
-              >
-                {message.timestamp.toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </p>
+              <div className="flex items-center justify-between mt-2">
+                <p
+                  className={`text-xs ${
+                    message.role === 'user'
+                      ? 'text-blue-200'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}
+                >
+                  {message.timestamp.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </p>
+
+                {/* Speak button for assistant messages */}
+                {message.role === 'assistant' && tts.isSupported && tts.settings.enabled && (
+                  <button
+                    onClick={() => speakMessage(message.content)}
+                    className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                    title="Read aloud"
+                  >
+                    <Volume2 className="h-4 w-4 text-gray-500" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}

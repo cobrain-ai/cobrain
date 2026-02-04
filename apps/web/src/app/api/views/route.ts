@@ -75,10 +75,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ templates })
     }
 
-    // Get shared view by token
+    // Get shared view by token (public endpoint)
     if (shareToken) {
       const view = await viewsRepository.findByShareToken(shareToken)
-      if (!view) {
+      // Return 404 if view doesn't exist or sharing is disabled
+      if (!view || !view.isShared) {
         return NextResponse.json({ error: 'View not found' }, { status: 404 })
       }
       // Execute view query and return data
