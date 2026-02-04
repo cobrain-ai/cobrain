@@ -1,6 +1,7 @@
 {
   "name": "@cobrain/database",
   "version": "0.1.0",
+  "license": "AGPL-3.0",
   "description": "CoBrain database abstractions - SQLite, graph, and vector storage",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

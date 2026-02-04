@@ -1,6 +1,7 @@
 {
   "name": "@cobrain/ai",
   "version": "0.1.0",
+  "license": "AGPL-3.0",
   "description": "CoBrain AI processing - entity extraction, embeddings, and NLP",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

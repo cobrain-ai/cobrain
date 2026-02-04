@@ -194,30 +194,50 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ## 📄 License
 
-CoBrain uses a dual-licensing model:
+CoBrain uses a dual-license model to balance open source values with sustainable business:
 
-| Component | License |
-|-----------|---------|
-| Core Application (`apps/`, `packages/`) | [AGPL-3.0](LICENSE) |
-| Cloud Services (`services/`) | Proprietary |
-| Documentation | CC-BY-4.0 |
+| Component | License | Purpose |
+|-----------|---------|---------|
+| Core Application | [AGPL-3.0](LICENSE) | Open source, community-driven |
+| Premium Sync Server | [FSL-1.1](licenses/FSL-1.1.md) | Protected from competitors for 2 years |
 
 ### Open Source (AGPL-3.0)
 
-The core CoBrain application is open-source under [AGPL-3.0](LICENSE). You can:
-- Use, modify, and distribute the software
+Most of CoBrain is open-source under [AGPL-3.0](LICENSE):
+- `apps/` - Web, desktop, browser extension
+- `packages/core` - Core types and utilities
+- `packages/database` - Database layer (Drizzle + cr-sqlite)
+- `packages/ai` - AI processing and extraction
+- `packages/sync` - Sync engine and WebSocket client
+
+You can:
+- Use, modify, and distribute the software freely
 - Run it for personal or internal business use
+- Self-host everything, including your own sync server
 - Contribute improvements back to the community
 
 **Note:** If you modify CoBrain and offer it as a network service, you must release your source code under AGPL-3.0.
 
+### Functional Source License (FSL-1.1)
+
+The premium sync server uses [FSL-1.1](licenses/FSL-1.1.md):
+- `packages/sync-server` - WebSocket sync server
+
+**What FSL means:**
+- ✅ You can view, read, and learn from the code
+- ✅ You can modify and self-host for personal/internal use
+- ❌ You cannot offer a competing commercial sync service
+- ✅ After 2 years, the code becomes Apache 2.0 (fully open)
+
+This protects our ability to offer premium sync while keeping all code visible and auditable.
+
 ### Commercial License
 
-For organizations that cannot comply with AGPL-3.0 (e.g., closed-source products, SaaS), we offer commercial licenses. See [COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md) for details.
+For organizations that need to offer CoBrain-based services without open-source obligations, we offer commercial licenses. Contact us for details.
 
 ### Contributing
 
-By contributing to CoBrain, you agree to our [Contributor License Agreement](CLA.md).
+By contributing to CoBrain, you agree to license your contributions under the same license as the component you're contributing to (AGPL-3.0 for most packages, FSL-1.1 for sync-server).
 
 ---
 

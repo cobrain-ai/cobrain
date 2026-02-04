@@ -1,6 +1,7 @@
 {
   "name": "@cobrain/plugins",
   "version": "0.1.0",
+  "license": "AGPL-3.0",
   "description": "Official CoBrain plugins for reminders, entities, views, and search",
   "type": "module",
   "main": "./dist/index.js",
