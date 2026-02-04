@@ -6,6 +6,7 @@ import type {
   LLMStreamChunk,
   ProviderCapabilities,
   HealthCheckResult,
+  ProviderType,
 } from '../types/index.js'
 import { BaseProvider } from './base.js'
 
@@ -23,12 +24,14 @@ export interface MockProviderConfig {
  */
 export class MockProvider extends BaseProvider implements LLMProvider {
   readonly name = 'Mock'
-  readonly type = 'mock' as const
+  // Cast to satisfy type system - mock is for testing only
+  readonly type: ProviderType = 'ollama' as ProviderType
   readonly capabilities: ProviderCapabilities = {
     streaming: true,
     functionCalling: false,
     vision: false,
     maxTokens: 4096,
+    models: ['mock-model'],
   }
 
   private responses: Map<string, string>
@@ -47,6 +50,10 @@ export class MockProvider extends BaseProvider implements LLMProvider {
     this.failMessage = config.failMessage ?? 'Mock provider failure'
   }
 
+  protected getDefaultModel(): string {
+    return 'mock-model'
+  }
+
   async initialize(): Promise<void> {
     this._isInitialized = true
   }
@@ -57,7 +64,7 @@ export class MockProvider extends BaseProvider implements LLMProvider {
 
   async complete(
     messages: LLMMessage[],
-    options?: LLMCompletionOptions
+    _options?: LLMCompletionOptions
   ): Promise<LLMResponse> {
     if (this.shouldFail) {
       throw new Error(this.failMessage)
@@ -73,21 +80,31 @@ export class MockProvider extends BaseProvider implements LLMProvider {
     // Check for configured responses
     let responseContent = this.defaultResponse
     for (const [key, value] of this.responses) {
-      if (userContent.toLowerCase().includes(key.toLowerCase())) {
+      const contentStr = typeof userContent === 'string'
+        ? userContent
+        : userContent.map(b => b.text ?? '').join('')
+      if (contentStr.toLowerCase().includes(key.toLowerCase())) {
         responseContent = value
         break
       }
     }
 
+    const inputTokens = this.estimateTokens(messages)
+    const outputTokens = this.estimateTokens([
+      { role: 'assistant', content: responseContent },
+    ])
+
     return {
+      id: `mock-${Date.now()}`,
+      provider: this.type,
       content: responseContent,
       model: 'mock-model',
       finishReason: 'stop',
+      latencyMs: this.delay,
       usage: {
-        inputTokens: this.estimateTokens(messages),
-        outputTokens: this.estimateTokens([
-          { role: 'assistant', content: responseContent },
-        ]),
+        inputTokens,
+        outputTokens,
+        totalTokens: inputTokens + outputTokens,
       },
     }
   }
@@ -102,15 +119,19 @@ export class MockProvider extends BaseProvider implements LLMProvider {
 
     const response = await this.complete(messages, options)
     const words = response.content.split(' ')
+    let index = 0
 
     for (const word of words) {
       if (this.delay > 0) {
         await new Promise((resolve) => setTimeout(resolve, this.delay / words.length))
       }
       yield {
+        id: response.id,
+        index: index++,
         content: word + ' ',
-        model: 'mock-model',
-        finishReason: null,
+        delta: { text: word + ' ' },
+        done: false,
+        finishReason: undefined,
       }
     }
 
@@ -120,7 +141,7 @@ export class MockProvider extends BaseProvider implements LLMProvider {
   async healthCheck(): Promise<HealthCheckResult> {
     return {
       healthy: !this.shouldFail,
-      latency: this.delay,
+      latencyMs: this.delay,
       message: this.shouldFail ? this.failMessage : 'Mock provider is healthy',
       models: ['mock-model'],
     }
@@ -132,7 +153,12 @@ export class MockProvider extends BaseProvider implements LLMProvider {
 
   // Helper to estimate tokens (rough approximation)
   private estimateTokens(messages: LLMMessage[]): number {
-    return messages.reduce((sum, m) => sum + Math.ceil(m.content.length / 4), 0)
+    return messages.reduce((sum, m) => {
+      const content = typeof m.content === 'string'
+        ? m.content
+        : m.content.map(b => b.text ?? '').join('')
+      return sum + Math.ceil(content.length / 4)
+    }, 0)
   }
 
   // Test helpers

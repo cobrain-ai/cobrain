@@ -13,7 +13,7 @@ export type {
 } from './entities.js'
 
 export { remindersRepository } from './reminders.js'
-export type { CreateReminderInput, UpdateReminderInput } from './reminders.js'
+export type { CreateReminderInput, UpdateReminderInput, ReminderStatus, ReminderType } from './reminders.js'
 
 export { embeddingsRepository } from './embeddings.js'
 export type { StoreEmbeddingInput, SimilarResult } from './embeddings.js'

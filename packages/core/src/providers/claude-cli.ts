@@ -1,6 +1,5 @@
 import { BaseProvider } from './base.js'
 import type {
-  LLMProviderConfig,
   LLMMessage,
   LLMCompletionOptions,
   LLMResponse,
@@ -177,7 +176,8 @@ export class ClaudeCliProvider extends BaseProvider {
     messages: LLMMessage[],
     options?: LLMCompletionOptions
   ): AsyncIterable<LLMStreamChunk> {
-    const model = options?.model ?? this.getModel()
+    const _model = options?.model ?? this.getModel()
+    void _model // For future use when stream supports model selection
     const responseId = generateId()
     const prompt = this.buildPrompt(messages)
 

@@ -1,7 +1,7 @@
 // Plugin System Types
 // Core plugin architecture for CoBrain extensibility
 
-import type { Note, Entity, LLMProvider } from '../types/index.js'
+import type { Note, LLMProvider } from '../types/index.js'
 
 /**
  * Plugin metadata for identification and display

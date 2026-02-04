@@ -1,6 +1,13 @@
 import type { Entity, EntityType, EntityRelation, RelationType } from '@cobrain/core'
+import { eq, and, like, inArray, or } from 'drizzle-orm'
 
-import { prisma } from '../client.js'
+import {
+  getDatabase,
+  generateId,
+  entities,
+  noteEntities,
+  entityRelations,
+} from '../client.js'
 
 export interface CreateEntityInput {
   type: EntityType
@@ -24,181 +31,259 @@ export interface CreateRelationInput {
   metadata?: Record<string, unknown>
 }
 
-function toEntity(dbEntity: {
-  id: string
-  type: string
-  name: string
-  metadata: unknown
-  createdAt: Date
-  updatedAt: Date
-}): Entity {
+function toEntity(dbEntity: typeof entities.$inferSelect): Entity {
   return {
     id: dbEntity.id,
     type: dbEntity.type as EntityType,
     name: dbEntity.name,
-    metadata: (dbEntity.metadata as Record<string, unknown>) ?? {},
+    metadata: (typeof dbEntity.metadata === 'string'
+      ? JSON.parse(dbEntity.metadata)
+      : dbEntity.metadata) as Record<string, unknown> ?? {},
     createdAt: dbEntity.createdAt,
     updatedAt: dbEntity.updatedAt,
   }
 }
 
-function toRelation(dbRelation: {
-  id: string
-  fromId: string
-  toId: string
-  type: string
-  weight: number
-  metadata: unknown
-  createdAt: Date
-}): EntityRelation {
+function toRelation(dbRelation: typeof entityRelations.$inferSelect): EntityRelation {
   return {
     id: dbRelation.id,
     sourceId: dbRelation.fromId,
     targetId: dbRelation.toId,
     type: dbRelation.type as RelationType,
     weight: dbRelation.weight,
-    metadata: (dbRelation.metadata as Record<string, unknown>) ?? {},
+    metadata: (typeof dbRelation.metadata === 'string'
+      ? JSON.parse(dbRelation.metadata)
+      : dbRelation.metadata) as Record<string, unknown> ?? {},
     createdAt: dbRelation.createdAt,
   }
 }
 
 export const entitiesRepository = {
   async create(input: CreateEntityInput): Promise<Entity> {
+    const db = getDatabase()
     const normalizedName = input.name.toLowerCase().trim()
 
-    const entity = await prisma.entity.upsert({
-      where: {
-        type_normalizedName: {
-          type: input.type,
-          normalizedName,
-        },
-      },
-      update: {
-        metadata: input.metadata ?? {},
-      },
-      create: {
-        type: input.type,
-        name: input.name,
-        normalizedName,
-        metadata: input.metadata ?? {},
-      },
+    // Check if entity exists
+    const existing = await db
+      .select()
+      .from(entities)
+      .where(
+        and(
+          eq(entities.type, input.type),
+          eq(entities.normalizedName, normalizedName)
+        )
+      )
+      .get()
+
+    if (existing) {
+      // Update existing
+      await db
+        .update(entities)
+        .set({
+          metadata: JSON.stringify(input.metadata ?? {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(entities.id, existing.id))
+
+      const updated = await db.select().from(entities).where(eq(entities.id, existing.id)).get()
+      return toEntity(updated!)
+    }
+
+    // Create new
+    const id = generateId()
+    const now = new Date()
+
+    await db.insert(entities).values({
+      id,
+      type: input.type,
+      name: input.name,
+      normalizedName,
+      metadata: JSON.stringify(input.metadata ?? {}),
+      createdAt: now,
+      updatedAt: now,
     })
 
-    return toEntity(entity)
+    const entity = await db.select().from(entities).where(eq(entities.id, id)).get()
+    return toEntity(entity!)
   },
 
   async findById(id: string): Promise<Entity | null> {
-    const entity = await prisma.entity.findUnique({
-      where: { id },
-    })
+    const db = getDatabase()
+    const entity = await db.select().from(entities).where(eq(entities.id, id)).get()
     return entity ? toEntity(entity) : null
   },
 
   async findByType(type: EntityType): Promise<Entity[]> {
-    const entities = await prisma.entity.findMany({
-      where: { type },
-      orderBy: { name: 'asc' },
-    })
-    return entities.map(toEntity)
+    const db = getDatabase()
+    const result = await db
+      .select()
+      .from(entities)
+      .where(eq(entities.type, type))
+      .orderBy(entities.name)
+
+    return result.map(toEntity)
   },
 
   async findByName(name: string): Promise<Entity[]> {
+    const db = getDatabase()
     const normalizedName = name.toLowerCase().trim()
-    const entities = await prisma.entity.findMany({
-      where: {
-        normalizedName: {
-          contains: normalizedName,
-        },
-      },
-    })
-    return entities.map(toEntity)
+
+    const result = await db
+      .select()
+      .from(entities)
+      .where(like(entities.normalizedName, `%${normalizedName}%`))
+
+    return result.map(toEntity)
   },
 
   async findByNote(noteId: string): Promise<Entity[]> {
-    const noteEntities = await prisma.noteEntity.findMany({
-      where: { noteId },
-      include: { entity: true },
-    })
-    return noteEntities.map((ne) => toEntity(ne.entity))
+    const db = getDatabase()
+
+    const links = await db
+      .select()
+      .from(noteEntities)
+      .where(eq(noteEntities.noteId, noteId))
+
+    if (links.length === 0) return []
+
+    const entityIds = links.map((l) => l.entityId)
+    const result = await db
+      .select()
+      .from(entities)
+      .where(inArray(entities.id, entityIds))
+
+    return result.map(toEntity)
   },
 
   async linkToNote(input: LinkEntityToNoteInput): Promise<void> {
-    await prisma.noteEntity.upsert({
-      where: {
-        noteId_entityId: {
-          noteId: input.noteId,
-          entityId: input.entityId,
-        },
-      },
-      update: {
-        confidence: input.confidence ?? 1.0,
-        startIndex: input.startIndex,
-        endIndex: input.endIndex,
-      },
-      create: {
+    const db = getDatabase()
+
+    // Check if link exists
+    const existing = await db
+      .select()
+      .from(noteEntities)
+      .where(
+        and(
+          eq(noteEntities.noteId, input.noteId),
+          eq(noteEntities.entityId, input.entityId)
+        )
+      )
+      .get()
+
+    if (existing) {
+      // Update existing
+      await db
+        .update(noteEntities)
+        .set({
+          confidence: input.confidence ?? 1.0,
+          startIndex: input.startIndex,
+          endIndex: input.endIndex,
+        })
+        .where(eq(noteEntities.id, existing.id))
+    } else {
+      // Create new
+      await db.insert(noteEntities).values({
+        id: generateId(),
         noteId: input.noteId,
         entityId: input.entityId,
         confidence: input.confidence ?? 1.0,
         startIndex: input.startIndex,
         endIndex: input.endIndex,
-      },
-    })
+      })
+    }
   },
 
   async unlinkFromNote(noteId: string, entityId: string): Promise<void> {
-    await prisma.noteEntity.delete({
-      where: {
-        noteId_entityId: {
-          noteId,
-          entityId,
-        },
-      },
-    })
+    const db = getDatabase()
+    await db
+      .delete(noteEntities)
+      .where(
+        and(
+          eq(noteEntities.noteId, noteId),
+          eq(noteEntities.entityId, entityId)
+        )
+      )
   },
 
   async createRelation(input: CreateRelationInput): Promise<EntityRelation> {
-    const relation = await prisma.entityRelation.upsert({
-      where: {
-        fromId_toId_type: {
-          fromId: input.fromId,
-          toId: input.toId,
-          type: input.type,
-        },
-      },
-      update: {
-        weight: input.weight ?? 1.0,
-        metadata: input.metadata ?? {},
-      },
-      create: {
-        fromId: input.fromId,
-        toId: input.toId,
-        type: input.type,
-        weight: input.weight ?? 1.0,
-        metadata: input.metadata ?? {},
-      },
+    const db = getDatabase()
+
+    // Check if relation exists
+    const existing = await db
+      .select()
+      .from(entityRelations)
+      .where(
+        and(
+          eq(entityRelations.fromId, input.fromId),
+          eq(entityRelations.toId, input.toId),
+          eq(entityRelations.type, input.type)
+        )
+      )
+      .get()
+
+    if (existing) {
+      // Update existing
+      await db
+        .update(entityRelations)
+        .set({
+          weight: input.weight ?? 1.0,
+          metadata: JSON.stringify(input.metadata ?? {}),
+        })
+        .where(eq(entityRelations.id, existing.id))
+
+      const updated = await db
+        .select()
+        .from(entityRelations)
+        .where(eq(entityRelations.id, existing.id))
+        .get()
+      return toRelation(updated!)
+    }
+
+    // Create new
+    const id = generateId()
+    const now = new Date()
+
+    await db.insert(entityRelations).values({
+      id,
+      fromId: input.fromId,
+      toId: input.toId,
+      type: input.type,
+      weight: input.weight ?? 1.0,
+      metadata: JSON.stringify(input.metadata ?? {}),
+      createdAt: now,
     })
 
-    return toRelation(relation)
+    const relation = await db
+      .select()
+      .from(entityRelations)
+      .where(eq(entityRelations.id, id))
+      .get()
+    return toRelation(relation!)
   },
 
   async findRelations(entityId: string): Promise<EntityRelation[]> {
-    const relations = await prisma.entityRelation.findMany({
-      where: {
-        OR: [{ fromId: entityId }, { toId: entityId }],
-      },
-    })
-    return relations.map(toRelation)
+    const db = getDatabase()
+
+    const result = await db
+      .select()
+      .from(entityRelations)
+      .where(
+        or(
+          eq(entityRelations.fromId, entityId),
+          eq(entityRelations.toId, entityId)
+        )
+      )
+
+    return result.map(toRelation)
   },
 
   async deleteRelation(id: string): Promise<void> {
-    await prisma.entityRelation.delete({
-      where: { id },
-    })
+    const db = getDatabase()
+    await db.delete(entityRelations).where(eq(entityRelations.id, id))
   },
 
   async delete(id: string): Promise<void> {
-    await prisma.entity.delete({
-      where: { id },
-    })
+    const db = getDatabase()
+    await db.delete(entities).where(eq(entities.id, id))
   },
 }

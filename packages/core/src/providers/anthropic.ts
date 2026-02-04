@@ -1,6 +1,5 @@
 import { BaseProvider } from './base.js'
 import type {
-  LLMProviderConfig,
   LLMMessage,
   LLMCompletionOptions,
   LLMResponse,

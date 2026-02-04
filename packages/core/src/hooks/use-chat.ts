@@ -137,7 +137,13 @@ export function useChat(options: UseChatOptions = {}): UseChatResult {
 
   const regenerate = useCallback(async () => {
     // Find last user message and remove the assistant response after it
-    const lastUserIndex = messages.findLastIndex((m) => m.role === 'user')
+    let lastUserIndex = -1
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        lastUserIndex = i
+        break
+      }
+    }
     if (lastUserIndex === -1) return
 
     const lastUserMessage = messages[lastUserIndex]

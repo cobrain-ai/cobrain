@@ -2,7 +2,7 @@
   "name": "@cobrain/database",
   "version": "0.1.0",
   "license": "AGPL-3.0",
-  "description": "CoBrain database abstractions - SQLite, graph, and vector storage",
+  "description": "CoBrain database abstractions - SQLite with Drizzle ORM and cr-sqlite for sync",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -13,26 +13,26 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": ["dist", "drizzle"],
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "lint": "eslint src/",
     "test": "vitest run",
     "clean": "rm -rf dist",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio"
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@cobrain/core": "workspace:*",
-    "@prisma/client": "^5.9.1",
-    "better-sqlite3": "^9.4.1"
+    "better-sqlite3": "^11.0.0",
+    "drizzle-orm": "^0.38.0"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.8",
-    "prisma": "^5.9.1",
+    "@types/better-sqlite3": "^7.6.13",
+    "drizzle-kit": "^0.30.0",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",
     "vitest": "^1.2.0"

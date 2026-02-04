@@ -1,4 +1,6 @@
-import { prisma } from '../client.js'
+import { eq, desc } from 'drizzle-orm'
+
+import { getDatabase, generateId, views, viewSnapshots } from '../client.js'
 
 export type ViewLayout = 'list' | 'grid' | 'timeline' | 'kanban' | 'graph'
 export type ViewType = 'custom' | 'projects' | 'tasks' | 'people' | 'timeline' | 'recent' | 'pinned'
@@ -70,30 +72,27 @@ export interface UpdateViewInput {
   isPinned?: boolean
 }
 
-function toView(dbView: {
-  id: string
-  userId: string
-  name: string
-  description: string | null
-  type: string
-  query: unknown
-  layout: string
-  settings: unknown
-  isShared: boolean
-  shareToken: string | null
-  isPinned: boolean
-  createdAt: Date
-  updatedAt: Date
-}): View {
+function parseJson<T>(value: unknown): T {
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as T
+    } catch {
+      return {} as T
+    }
+  }
+  return (value ?? {}) as T
+}
+
+function toView(dbView: typeof views.$inferSelect): View {
   return {
     id: dbView.id,
     userId: dbView.userId,
     name: dbView.name,
     description: dbView.description,
     type: dbView.type as ViewType,
-    query: (dbView.query as ViewQuery) ?? {},
+    query: parseJson<ViewQuery>(dbView.query),
     layout: dbView.layout as ViewLayout,
-    settings: (dbView.settings as ViewSettings) ?? {},
+    settings: parseJson<ViewSettings>(dbView.settings),
     isShared: dbView.isShared,
     shareToken: dbView.shareToken,
     isPinned: dbView.isPinned,
@@ -102,18 +101,12 @@ function toView(dbView: {
   }
 }
 
-function toSnapshot(dbSnapshot: {
-  id: string
-  viewId: string
-  name: string | null
-  data: unknown
-  createdAt: Date
-}): ViewSnapshot {
+function toSnapshot(dbSnapshot: typeof viewSnapshots.$inferSelect): ViewSnapshot {
   return {
     id: dbSnapshot.id,
     viewId: dbSnapshot.viewId,
     name: dbSnapshot.name,
-    data: dbSnapshot.data,
+    data: parseJson(dbSnapshot.data),
     createdAt: dbSnapshot.createdAt,
   }
 }
@@ -126,82 +119,89 @@ function generateShareToken(): string {
 
 export const viewsRepository = {
   async create(input: CreateViewInput): Promise<View> {
-    const view = await prisma.view.create({
-      data: {
-        userId: input.userId,
-        name: input.name,
-        description: input.description,
-        type: input.type ?? 'custom',
-        query: input.query ?? {},
-        layout: input.layout ?? 'list',
-        settings: input.settings ?? {},
-      },
+    const db = getDatabase()
+    const id = generateId()
+    const now = new Date()
+
+    await db.insert(views).values({
+      id,
+      userId: input.userId,
+      name: input.name,
+      description: input.description,
+      type: input.type ?? 'custom',
+      query: JSON.stringify(input.query ?? {}),
+      layout: input.layout ?? 'list',
+      settings: JSON.stringify(input.settings ?? {}),
+      createdAt: now,
+      updatedAt: now,
     })
-    return toView(view)
+
+    const view = await db.select().from(views).where(eq(views.id, id)).get()
+    return toView(view!)
   },
 
   async findById(id: string): Promise<View | null> {
-    const view = await prisma.view.findUnique({
-      where: { id },
-    })
+    const db = getDatabase()
+    const view = await db.select().from(views).where(eq(views.id, id)).get()
     return view ? toView(view) : null
   },
 
   async findByShareToken(token: string): Promise<View | null> {
-    const view = await prisma.view.findUnique({
-      where: { shareToken: token },
-    })
+    const db = getDatabase()
+    const view = await db.select().from(views).where(eq(views.shareToken, token)).get()
     return view && view.isShared ? toView(view) : null
   },
 
   async findByUser(userId: string): Promise<View[]> {
-    const views = await prisma.view.findMany({
-      where: { userId },
-      orderBy: [{ isPinned: 'desc' }, { updatedAt: 'desc' }],
-    })
-    return views.map(toView)
+    const db = getDatabase()
+    const result = await db
+      .select()
+      .from(views)
+      .where(eq(views.userId, userId))
+      .orderBy(desc(views.isPinned), desc(views.updatedAt))
+
+    return result.map(toView)
   },
 
   async update(id: string, input: UpdateViewInput): Promise<View> {
-    const data: Record<string, unknown> = {}
+    const db = getDatabase()
+    const updates: Partial<typeof views.$inferInsert> = {
+      updatedAt: new Date(),
+    }
 
-    if (input.name !== undefined) data.name = input.name
-    if (input.description !== undefined) data.description = input.description
-    if (input.type !== undefined) data.type = input.type
-    if (input.query !== undefined) data.query = input.query
-    if (input.layout !== undefined) data.layout = input.layout
-    if (input.settings !== undefined) data.settings = input.settings
-    if (input.isPinned !== undefined) data.isPinned = input.isPinned
+    if (input.name !== undefined) updates.name = input.name
+    if (input.description !== undefined) updates.description = input.description
+    if (input.type !== undefined) updates.type = input.type
+    if (input.query !== undefined) updates.query = JSON.stringify(input.query)
+    if (input.layout !== undefined) updates.layout = input.layout
+    if (input.settings !== undefined) updates.settings = JSON.stringify(input.settings)
+    if (input.isPinned !== undefined) updates.isPinned = input.isPinned
     if (input.isShared !== undefined) {
-      data.isShared = input.isShared
+      updates.isShared = input.isShared
       if (input.isShared) {
         // Generate share token if enabling sharing
-        const existing = await prisma.view.findUnique({ where: { id } })
+        const existing = await db.select().from(views).where(eq(views.id, id)).get()
         if (!existing?.shareToken) {
-          data.shareToken = generateShareToken()
+          updates.shareToken = generateShareToken()
         }
       }
     }
 
-    const view = await prisma.view.update({
-      where: { id },
-      data,
-    })
-    return toView(view)
+    await db.update(views).set(updates).where(eq(views.id, id))
+
+    const view = await db.select().from(views).where(eq(views.id, id)).get()
+    return toView(view!)
   },
 
   async delete(id: string): Promise<void> {
-    await prisma.view.delete({
-      where: { id },
-    })
+    const db = getDatabase()
+    await db.delete(views).where(eq(views.id, id))
   },
 
   async regenerateShareToken(id: string): Promise<string> {
+    const db = getDatabase()
     const token = generateShareToken()
-    await prisma.view.update({
-      where: { id },
-      data: { shareToken: token },
-    })
+    await db.update(views).set({ shareToken: token }).where(eq(views.id, id))
     return token
   },
 
@@ -211,35 +211,42 @@ export const viewsRepository = {
     data: unknown,
     name?: string
   ): Promise<ViewSnapshot> {
-    const snapshot = await prisma.viewSnapshot.create({
-      data: {
-        viewId,
-        name,
-        data: data as any,
-      },
+    const db = getDatabase()
+    const id = generateId()
+    const now = new Date()
+
+    await db.insert(viewSnapshots).values({
+      id,
+      viewId,
+      name,
+      data: JSON.stringify(data),
+      createdAt: now,
     })
-    return toSnapshot(snapshot)
+
+    const snapshot = await db.select().from(viewSnapshots).where(eq(viewSnapshots.id, id)).get()
+    return toSnapshot(snapshot!)
   },
 
   async findSnapshots(viewId: string): Promise<ViewSnapshot[]> {
-    const snapshots = await prisma.viewSnapshot.findMany({
-      where: { viewId },
-      orderBy: { createdAt: 'desc' },
-    })
-    return snapshots.map(toSnapshot)
+    const db = getDatabase()
+    const result = await db
+      .select()
+      .from(viewSnapshots)
+      .where(eq(viewSnapshots.viewId, viewId))
+      .orderBy(desc(viewSnapshots.createdAt))
+
+    return result.map(toSnapshot)
   },
 
   async findSnapshotById(id: string): Promise<ViewSnapshot | null> {
-    const snapshot = await prisma.viewSnapshot.findUnique({
-      where: { id },
-    })
+    const db = getDatabase()
+    const snapshot = await db.select().from(viewSnapshots).where(eq(viewSnapshots.id, id)).get()
     return snapshot ? toSnapshot(snapshot) : null
   },
 
   async deleteSnapshot(id: string): Promise<void> {
-    await prisma.viewSnapshot.delete({
-      where: { id },
-    })
+    const db = getDatabase()
+    await db.delete(viewSnapshots).where(eq(viewSnapshots.id, id))
   },
 
   // View templates (pre-defined views)

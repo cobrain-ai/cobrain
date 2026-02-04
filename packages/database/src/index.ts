@@ -1,14 +1,47 @@
-// @cobrain/database - Database abstractions
+// @cobrain/database - Database abstractions with Drizzle ORM
 
-// Prisma client and connection
-export { prisma, initDatabase, closeDatabase } from './client.js'
-export type { PrismaClient } from './client.js'
+// Database client and connection
+export {
+  initDatabase,
+  getDatabase,
+  getSqlite,
+  closeDatabase,
+  generateId,
+  schema,
+} from './client.js'
+export type { DrizzleDatabase, DatabaseConfig } from './client.js'
 
-// Prisma enums
-export { NoteSource, ReminderStatus, ReminderType } from '@prisma/client'
+// Schema types
+export type {
+  NoteSource,
+  ReminderStatus,
+  ReminderType,
+  User,
+  NewUser,
+  Note,
+  NewNote,
+  Entity,
+  NewEntity,
+  NoteEntity,
+  NewNoteEntity,
+  EntityRelation,
+  NewEntityRelation,
+  Embedding,
+  NewEmbedding,
+  Reminder,
+  NewReminder,
+  View,
+  NewView,
+  ViewSnapshot,
+  NewViewSnapshot,
+  PushSubscription,
+  NewPushSubscription,
+  Device,
+  NewDevice,
+} from './client.js'
 
 // Repositories
 export * from './repositories/index.js'
 
-// Legacy types (for backward compatibility - prefer repository types)
+// Legacy types (for backward compatibility)
 export * from './types.js'
