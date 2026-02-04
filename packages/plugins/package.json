@@ -1,0 +1,49 @@
+{
+  "name": "@cobrain/plugins",
+  "version": "0.1.0",
+  "description": "Official CoBrain plugins for reminders, entities, views, and search",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./reminders": {
+      "import": "./dist/reminders/index.js",
+      "types": "./dist/reminders/index.d.ts"
+    },
+    "./entities": {
+      "import": "./dist/entities/index.js",
+      "types": "./dist/entities/index.d.ts"
+    },
+    "./views": {
+      "import": "./dist/views/index.js",
+      "types": "./dist/views/index.d.ts"
+    },
+    "./search": {
+      "import": "./dist/search/index.js",
+      "types": "./dist/search/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@cobrain/core": "workspace:*",
+    "@cobrain/database": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "rimraf": "^5.0.5",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "@cobrain/core": "workspace:*"
+  }
+}
