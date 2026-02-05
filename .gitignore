@@ -56,3 +56,10 @@ Thumbs.db
 services/*
 !services/README.md
 !services/.gitkeep
+
+# Signing keys (NEVER commit these)
+cobrain-release.keystore
+cobrain-keystore.b64
+*.keystore
+*.jks
+*.p12

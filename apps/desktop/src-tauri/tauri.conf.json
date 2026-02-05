@@ -43,8 +43,7 @@
     ],
     "windows": {
       "certificateThumbprint": null,
-      "digestAlgorithm": "sha256",
-      "timestampUrl": ""
+      "digestAlgorithm": "sha256"
     },
     "macOS": {
       "minimumSystemVersion": "10.13"

@@ -169,11 +169,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Setup Expo
-        run: |
-          npm install -g expo-cli eas-cli
-          cd apps/mobile
-          npx expo install
+      - name: Setup EAS CLI
+        run: npm install -g eas-cli
 
       - name: Generate native project
         working-directory: apps/mobile
@@ -264,7 +261,7 @@ jobs:
           merge-multiple: true
 
       - name: List artifacts
-        run: find artifacts -type f 2>/dev/null || echo "No artifacts"
+        run: find artifacts -type f || echo "No artifacts found"
 
       - name: Create/Update Release
         uses: softprops/action-gh-release@v1

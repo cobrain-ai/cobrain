@@ -63,7 +63,7 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Install Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
@@ -119,7 +119,6 @@ jobs:
             apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.exe
             apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi
             apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.dmg
-            apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.app
             apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.deb
             apps/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage
           if-no-files-found: error
@@ -137,7 +136,7 @@ jobs:
           merge-multiple: true
 
       - name: List artifacts
-        run: find artifacts -type f | head -50
+        run: find artifacts -type f
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
