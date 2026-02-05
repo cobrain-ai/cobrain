@@ -89,6 +89,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
+      - name: Build workspace dependencies
+        run: pnpm run build --filter=@cobrain/core --filter=@cobrain/database --filter=@cobrain/ai --filter=@cobrain/ui
+
       - name: Build web app for static export
         run: pnpm --filter web build
         env:
