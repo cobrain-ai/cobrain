@@ -80,36 +80,24 @@ jobs:
       - name: Fix Kotlin version compatibility
         working-directory: apps/mobile/android
         run: |
-          # Suppress Kotlin version compatibility checks
-          echo "" >> gradle.properties
-          echo "# Fix Kotlin/Compose version compatibility" >> gradle.properties
-          echo "kotlin.jvm.target.validation.mode=IGNORE" >> gradle.properties
-
-          # Force Kotlin 1.9.24 compatible Compose compiler version globally
+          # Ensure Kotlin version is set to 1.9.24 (which maps to Compose Compiler 1.5.14)
+          # The expo-modules-core versionsMap expects exact version match
           cat >> gradle.properties << 'EOF'
 
-          # Suppress Compose compiler version check for Kotlin 1.9.24
-          # expo-modules-core expects 1.5.14 for Kotlin 1.9.24
-          android.suppressKotlinVersionCompatibilityCheck=true
+          # Fix Kotlin/Compose version compatibility
+          kotlin.jvm.target.validation.mode=IGNORE
+
+          # Force Kotlin version to 1.9.24 for Compose Compiler 1.5.14 compatibility
+          kotlinVersion=1.9.24
           EOF
 
-          # Patch all build.gradle files to use correct compose compiler version for Kotlin 1.9.24
-          find . -name "build.gradle" -exec sed -i 's/kotlinCompilerExtensionVersion = "1.5.15"/kotlinCompilerExtensionVersion = "1.5.14"/g' {} \; || true
+          # Also set it in the ext block of build.gradle to ensure it's picked up
+          sed -i 's/ext {/ext {\n        kotlinVersion = "1.9.24"/' build.gradle || true
 
-          # Add compose compiler override in root build.gradle
-          cat >> build.gradle << 'EOF'
-
-          // Force Compose compiler version for Kotlin 1.9.24 compatibility
-          subprojects {
-              afterEvaluate { project ->
-                  if (project.hasProperty('android') && project.android.hasProperty('composeOptions')) {
-                      project.android.composeOptions {
-                          kotlinCompilerExtensionVersion = "1.5.14"
-                      }
-                  }
-              }
-          }
-          EOF
+          # Alternative: directly patch expo-modules-core to add suppressKotlinVersionCompatibilityCheck
+          # This flag is passed to the compose compiler to skip version validation
+          find ../node_modules -path "*expo-modules-core/android/build.gradle" -exec sed -i \
+            's/kotlinCompilerExtensionVersion = versionsMap\[kotlinVersion()\]/kotlinCompilerExtensionVersion = "1.5.14"/' {} \; 2>/dev/null || true
 
       - name: Build Android APK (Debug)
         working-directory: apps/mobile/android
