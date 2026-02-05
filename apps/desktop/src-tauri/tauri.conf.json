@@ -67,6 +67,12 @@
     },
     "autostart": {
       "all": true
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUzMzAxNzQyQzdDM0U3ODUKUldTRjU4UEhRaGN3NDJMYVlJVHZ5eHo0WUVFN2JJNVc4Y25BTG9pSjlmS2ZSUHBQMGM1cElJSE4K",
+      "endpoints": [
+        "https://github.com/cobrain-ai/cobrain/releases/latest/download/latest.json"
+      ]
     }
   }
 }
