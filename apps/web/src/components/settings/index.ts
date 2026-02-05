@@ -25,3 +25,5 @@ export type {
 } from './settings-sections'
 
 export { PushSettings } from './push-settings'
+
+export { CalendarSettings } from './calendar-settings'
