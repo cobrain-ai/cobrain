@@ -16,6 +16,7 @@
     "@cobrain/database": "workspace:*",
     "@xyflow/react": "^12.4.0",
     "bcryptjs": "^2.4.3",
+    "lucide-react": "^0.454.0",
     "next": "^15.1.0",
     "next-auth": "^5.0.0-beta.4",
     "react": "^19.0.0",

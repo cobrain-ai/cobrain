@@ -37,4 +37,6 @@ export type {
   ViewType,
   CreateViewInput,
   UpdateViewInput,
+  ShareAccessLog,
+  ShareAnalytics,
 } from './views.js'

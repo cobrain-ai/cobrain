@@ -1,13 +1,36 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { Share2, Copy, Check, RefreshCw, Globe, Lock, X } from 'lucide-react'
+import { useState, useCallback, useEffect } from 'react'
+import {
+  Share2,
+  Copy,
+  Check,
+  RefreshCw,
+  Globe,
+  Lock,
+  X,
+  Shield,
+  Calendar,
+  BarChart3,
+  Eye,
+  EyeOff,
+} from 'lucide-react'
+
+interface ShareAnalytics {
+  totalViews: number
+  uniqueVisitors: number
+  viewsByDay: { date: string; count: number }[]
+  topReferrers: { referrer: string; count: number }[]
+  topCountries: { country: string; count: number }[]
+}
 
 interface ShareDialogProps {
   viewId: string
   viewName: string
   isShared: boolean
   shareToken: string | null
+  sharePassword?: string | null
+  shareExpiresAt?: Date | null
   onClose: () => void
   onUpdate: (isShared: boolean) => void
 }
@@ -17,6 +40,8 @@ export function ShareDialog({
   viewName,
   isShared: initialIsShared,
   shareToken: initialShareToken,
+  sharePassword: initialSharePassword,
+  shareExpiresAt: initialShareExpiresAt,
   onClose,
   onUpdate,
 }: ShareDialogProps) {
@@ -25,9 +50,49 @@ export function ShareDialog({
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  // Password protection
+  const [passwordEnabled, setPasswordEnabled] = useState(!!initialSharePassword)
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+
+  // Expiration
+  const [expirationEnabled, setExpirationEnabled] = useState(!!initialShareExpiresAt)
+  const [expiresAt, setExpiresAt] = useState<string>(
+    initialShareExpiresAt
+      ? new Date(initialShareExpiresAt).toISOString().split('T')[0]
+      : ''
+  )
+
+  // Analytics
+  const [showAnalytics, setShowAnalytics] = useState(false)
+  const [analytics, setAnalytics] = useState<ShareAnalytics | null>(null)
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false)
+
   const shareUrl = shareToken
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/shared/view/${shareToken}`
     : null
+
+  // Fetch analytics when toggled
+  useEffect(() => {
+    if (showAnalytics && !analytics && !loadingAnalytics) {
+      fetchAnalytics()
+    }
+  }, [showAnalytics])
+
+  const fetchAnalytics = async () => {
+    setLoadingAnalytics(true)
+    try {
+      const response = await fetch(`/api/views/analytics?id=${viewId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setAnalytics(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error)
+    } finally {
+      setLoadingAnalytics(false)
+    }
+  }
 
   const toggleSharing = useCallback(async () => {
     setLoading(true)
@@ -50,6 +115,28 @@ export function ShareDialog({
       setLoading(false)
     }
   }, [viewId, isShared, onUpdate])
+
+  const updateShareSettings = useCallback(async () => {
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/views?id=${viewId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sharePassword: passwordEnabled ? password : null,
+          shareExpiresAt: expirationEnabled && expiresAt ? new Date(expiresAt).toISOString() : null,
+        }),
+      })
+
+      if (response.ok) {
+        // Settings updated successfully
+      }
+    } catch (error) {
+      console.error('Failed to update share settings:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [viewId, passwordEnabled, password, expirationEnabled, expiresAt])
 
   const regenerateToken = useCallback(async () => {
     setLoading(true)
@@ -142,7 +229,7 @@ export function ShareDialog({
 
           {/* Share URL */}
           {isShared && shareUrl && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -168,18 +255,146 @@ export function ShareDialog({
                 </button>
               </div>
 
+              {/* Password Protection */}
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm font-medium">Password Protection</span>
+                  </div>
+                  <button
+                    onClick={() => setPasswordEnabled(!passwordEnabled)}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${
+                      passwordEnabled ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
+                        passwordEnabled ? 'translate-x-5' : 'translate-x-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
+                {passwordEnabled && (
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter password"
+                      className="w-full px-3 py-2 pr-10 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg"
+                    />
+                    <button
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Expiration Date */}
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm font-medium">Expiration Date</span>
+                  </div>
+                  <button
+                    onClick={() => setExpirationEnabled(!expirationEnabled)}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${
+                      expirationEnabled ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
+                        expirationEnabled ? 'translate-x-5' : 'translate-x-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
+                {expirationEnabled && (
+                  <input
+                    type="date"
+                    value={expiresAt}
+                    onChange={(e) => setExpiresAt(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg"
+                  />
+                )}
+              </div>
+
+              {/* Save Settings Button */}
+              {(passwordEnabled || expirationEnabled) && (
+                <button
+                  onClick={updateShareSettings}
+                  disabled={loading}
+                  className="w-full px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Saving...' : 'Save Settings'}
+                </button>
+              )}
+
+              {/* Analytics Toggle */}
               <button
-                onClick={regenerateToken}
-                disabled={loading}
+                onClick={() => setShowAnalytics(!showAnalytics)}
                 className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
               >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                Regenerate link
+                <BarChart3 className="h-4 w-4" />
+                {showAnalytics ? 'Hide Analytics' : 'View Analytics'}
               </button>
 
-              <p className="text-xs text-gray-500">
-                Note: Regenerating the link will invalidate the current one.
-              </p>
+              {/* Analytics Panel */}
+              {showAnalytics && (
+                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-3">
+                  {loadingAnalytics ? (
+                    <div className="text-sm text-gray-500 text-center py-4">
+                      Loading analytics...
+                    </div>
+                  ) : analytics ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="text-center p-2 bg-white dark:bg-gray-900 rounded-lg">
+                          <p className="text-2xl font-bold text-blue-500">{analytics.totalViews}</p>
+                          <p className="text-xs text-gray-500">Total Views</p>
+                        </div>
+                        <div className="text-center p-2 bg-white dark:bg-gray-900 rounded-lg">
+                          <p className="text-2xl font-bold text-green-500">{analytics.uniqueVisitors}</p>
+                          <p className="text-xs text-gray-500">Unique Visitors</p>
+                        </div>
+                      </div>
+                      {analytics.topReferrers.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-gray-500 mb-1">Top Referrers</p>
+                          {analytics.topReferrers.slice(0, 3).map((r, i) => (
+                            <div key={i} className="flex justify-between text-xs">
+                              <span className="truncate">{r.referrer || 'Direct'}</span>
+                              <span className="text-gray-500">{r.count}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-gray-500 text-center">No analytics data yet</p>
+                  )}
+                </div>
+              )}
+
+              <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={regenerateToken}
+                  disabled={loading}
+                  className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                >
+                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                  Regenerate link
+                </button>
+                <p className="text-xs text-gray-500 mt-1">
+                  This will invalidate the current link.
+                </p>
+              </div>
             </div>
           )}
         </div>

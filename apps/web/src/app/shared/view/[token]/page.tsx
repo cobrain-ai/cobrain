@@ -1,7 +1,10 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
+import { headers } from 'next/headers'
+import { SharedViewClient } from './client'
 
 interface SharedViewPageProps {
   params: Promise<{ token: string }>
+  searchParams: Promise<{ password?: string }>
 }
 
 interface ViewData {
@@ -13,6 +16,7 @@ interface ViewData {
     layout: string
     createdAt: string
     updatedAt: string
+    hasPassword: boolean
   }
   data: {
     notes: Array<{
@@ -27,14 +31,34 @@ interface ViewData {
     }>
     total: number
   }
+  requiresPassword?: boolean
+  passwordError?: boolean
 }
 
-async function getSharedView(token: string): Promise<ViewData | null> {
+async function getSharedView(
+  token: string,
+  password?: string
+): Promise<ViewData | null> {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const response = await fetch(`${baseUrl}/api/views?share=${token}`, {
+    const url = new URL(`${baseUrl}/api/shared/${token}`)
+    if (password) {
+      url.searchParams.set('password', password)
+    }
+
+    const response = await fetch(url.toString(), {
       cache: 'no-store',
     })
+
+    if (response.status === 401) {
+      const data = await response.json()
+      return {
+        view: data.view,
+        data: { notes: [], total: 0 },
+        requiresPassword: true,
+        passwordError: data.error === 'Invalid password',
+      }
+    }
 
     if (!response.ok) {
       return null
@@ -46,12 +70,28 @@ async function getSharedView(token: string): Promise<ViewData | null> {
   }
 }
 
-export default async function SharedViewPage({ params }: SharedViewPageProps) {
+export default async function SharedViewPage({
+  params,
+  searchParams,
+}: SharedViewPageProps) {
   const { token } = await params
-  const viewData = await getSharedView(token)
+  const { password } = await searchParams
+  const viewData = await getSharedView(token, password)
 
   if (!viewData) {
     notFound()
+  }
+
+  // If password required, show password form
+  if (viewData.requiresPassword) {
+    return (
+      <SharedViewClient
+        token={token}
+        requiresPassword
+        passwordError={viewData.passwordError}
+        viewName={viewData.view?.name}
+      />
+    )
   }
 
   const { view, data } = viewData
@@ -65,9 +105,9 @@ export default async function SharedViewPage({ params }: SharedViewPageProps) {
             <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-xs">
               Shared View
             </span>
-            <span>•</span>
+            <span>-</span>
             <span>{view.type}</span>
-            <span>•</span>
+            <span>-</span>
             <span>{view.layout} layout</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -79,8 +119,8 @@ export default async function SharedViewPage({ params }: SharedViewPageProps) {
             </p>
           )}
           <p className="mt-2 text-xs text-gray-500">
-            {data.total} {data.total === 1 ? 'note' : 'notes'} •
-            Last updated {new Date(view.updatedAt).toLocaleDateString()}
+            {data.total} {data.total === 1 ? 'note' : 'notes'} - Last updated{' '}
+            {new Date(view.updatedAt).toLocaleDateString()}
           </p>
         </div>
       </header>
@@ -152,6 +192,8 @@ export async function generateMetadata({ params }: SharedViewPageProps) {
 
   return {
     title: `${viewData.view.name} - Shared View | CoBrain`,
-    description: viewData.view.description || `A shared view from CoBrain with ${viewData.data.total} notes.`,
+    description:
+      viewData.view.description ||
+      `A shared view from CoBrain with ${viewData.data.total} notes.`,
   }
 }

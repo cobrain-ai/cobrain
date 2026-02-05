@@ -226,6 +226,8 @@ export const views = sqliteTable(
     settings: text('settings', { mode: 'json' }).default('{}').notNull(),
     isShared: integer('is_shared', { mode: 'boolean' }).default(false).notNull(),
     shareToken: text('share_token'),
+    sharePassword: text('share_password'), // Hashed password for protected shares
+    shareExpiresAt: integer('share_expires_at', { mode: 'timestamp' }), // Expiration date
     isPinned: integer('is_pinned', { mode: 'boolean' }).default(false).notNull(),
     createdAt: integer('created_at', { mode: 'timestamp' })
       .default(sql`(unixepoch())`)
@@ -237,6 +239,28 @@ export const views = sqliteTable(
   (table) => [
     index('views_user_id_idx').on(table.userId),
     uniqueIndex('views_share_token_idx').on(table.shareToken),
+  ]
+)
+
+// Share Access Analytics
+export const shareAccessLogs = sqliteTable(
+  'share_access_logs',
+  {
+    id: text('id').primaryKey().notNull(),
+    viewId: text('view_id')
+      .notNull()
+      .references(() => views.id, { onDelete: 'cascade' }),
+    accessedAt: integer('accessed_at', { mode: 'timestamp' })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+    ipAddress: text('ip_address'),
+    userAgent: text('user_agent'),
+    referrer: text('referrer'),
+    country: text('country'),
+  },
+  (table) => [
+    index('share_access_logs_view_id_idx').on(table.viewId),
+    index('share_access_logs_accessed_at_idx').on(table.accessedAt),
   ]
 )
 
@@ -328,3 +352,5 @@ export type PushSubscription = typeof pushSubscriptions.$inferSelect
 export type NewPushSubscription = typeof pushSubscriptions.$inferInsert
 export type Device = typeof devices.$inferSelect
 export type NewDevice = typeof devices.$inferInsert
+export type ShareAccessLog = typeof shareAccessLogs.$inferSelect
+export type NewShareAccessLog = typeof shareAccessLogs.$inferInsert

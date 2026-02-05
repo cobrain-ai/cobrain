@@ -54,6 +54,8 @@ const updateViewSchema = z.object({
   settings: viewSettingsSchema.optional(),
   isShared: z.boolean().optional(),
   isPinned: z.boolean().optional(),
+  sharePassword: z.string().nullable().optional(),
+  shareExpiresAt: z.string().nullable().optional(),
 })
 
 export async function GET(request: Request) {
@@ -235,7 +237,17 @@ export async function PATCH(request: Request) {
       )
     }
 
-    const view = await viewsRepository.update(viewId, result.data)
+    // Transform shareExpiresAt string to Date
+    const updateData = {
+      ...result.data,
+      shareExpiresAt: result.data.shareExpiresAt
+        ? new Date(result.data.shareExpiresAt)
+        : result.data.shareExpiresAt === null
+          ? null
+          : undefined,
+    }
+
+    const view = await viewsRepository.update(viewId, updateData)
     return NextResponse.json({ view })
   } catch (error) {
     console.error('Update view error:', error)
