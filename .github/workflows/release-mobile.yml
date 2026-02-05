@@ -82,6 +82,10 @@ jobs:
         run: |
           echo "kotlin.jvm.target.validation.mode=IGNORE" >> gradle.properties
           echo "android.suppressKotlinVersionCompatibilityCheck=true" >> gradle.properties
+          # Downgrade Compose compiler to match Kotlin 1.9.24
+          sed -i 's/kotlinCompilerExtensionVersion = "1.5.15"/kotlinCompilerExtensionVersion = "1.5.14"/' app/build.gradle || true
+          # Also try via gradle property
+          echo "compose.kotlinCompilerExtension=1.5.14" >> gradle.properties
 
       - name: Build Android APK (Debug)
         working-directory: apps/mobile/android
