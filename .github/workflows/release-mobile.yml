@@ -80,12 +80,36 @@ jobs:
       - name: Fix Kotlin version compatibility
         working-directory: apps/mobile/android
         run: |
+          # Suppress Kotlin version compatibility checks
+          echo "" >> gradle.properties
+          echo "# Fix Kotlin/Compose version compatibility" >> gradle.properties
           echo "kotlin.jvm.target.validation.mode=IGNORE" >> gradle.properties
-          echo "android.suppressKotlinVersionCompatibilityCheck=true" >> gradle.properties
-          # Downgrade Compose compiler to match Kotlin 1.9.24
-          sed -i 's/kotlinCompilerExtensionVersion = "1.5.15"/kotlinCompilerExtensionVersion = "1.5.14"/' app/build.gradle || true
-          # Also try via gradle property
-          echo "compose.kotlinCompilerExtension=1.5.14" >> gradle.properties
+
+          # Force Kotlin 1.9.24 compatible Compose compiler version globally
+          cat >> gradle.properties << 'EOF'
+
+          # Suppress Compose compiler version check for Kotlin 1.9.24
+          # expo-modules-core expects 1.5.14 for Kotlin 1.9.24
+          android.suppressKotlinVersionCompatibilityCheck=true
+          EOF
+
+          # Patch all build.gradle files to use correct compose compiler version for Kotlin 1.9.24
+          find . -name "build.gradle" -exec sed -i 's/kotlinCompilerExtensionVersion = "1.5.15"/kotlinCompilerExtensionVersion = "1.5.14"/g' {} \; || true
+
+          # Add compose compiler override in root build.gradle
+          cat >> build.gradle << 'EOF'
+
+          // Force Compose compiler version for Kotlin 1.9.24 compatibility
+          subprojects {
+              afterEvaluate { project ->
+                  if (project.hasProperty('android') && project.android.hasProperty('composeOptions')) {
+                      project.android.composeOptions {
+                          kotlinCompilerExtensionVersion = "1.5.14"
+                      }
+                  }
+              }
+          }
+          EOF
 
       - name: Build Android APK (Debug)
         working-directory: apps/mobile/android

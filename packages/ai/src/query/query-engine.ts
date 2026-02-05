@@ -1,4 +1,4 @@
-import type { LLMProvider, Note, SearchResult } from '@cobrain/core'
+import type { LLMProvider, Note } from '@cobrain/core'
 
 export interface QueryRequest {
   query: string

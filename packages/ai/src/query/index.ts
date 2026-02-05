@@ -11,5 +11,4 @@ export type {
   QueryIntent,
 } from './query-engine.js'
 
-// Re-export semantic search from parent
-export { semanticSearch } from '../query.js'
+// Note: semanticSearch is exported from ../search/index.js instead

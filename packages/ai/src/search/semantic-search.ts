@@ -255,15 +255,16 @@ export function toCoreSearchResults(
   results: SearchResult[],
   notesMap: Map<string, Note>
 ): CoreSearchResult[] {
-  return results
-    .map((result) => {
-      const note = notesMap.get(result.noteId)
-      if (!note) return null
-      return {
+  const coreResults: CoreSearchResult[] = []
+  for (const result of results) {
+    const note = notesMap.get(result.noteId)
+    if (note) {
+      coreResults.push({
         note,
         score: result.relevance,
         highlights: result.highlights,
-      }
-    })
-    .filter((r): r is CoreSearchResult => r !== null)
+      })
+    }
+  }
+  return coreResults
 }
