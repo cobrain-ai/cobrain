@@ -65,15 +65,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Setup Expo
+      - name: Build workspace dependencies
         run: |
-          npm install -g expo-cli eas-cli
-          cd apps/mobile
-          npx expo install
+          pnpm --filter @cobrain/core build
+          pnpm --filter @cobrain/database build
+
+      - name: Setup Expo
+        run: npm install -g eas-cli
 
       - name: Generate native project
         working-directory: apps/mobile
-        run: npx expo prebuild --platform android --clean
+        run: npx expo prebuild --platform android --clean --npm
 
       - name: Build Android APK (Debug)
         working-directory: apps/mobile/android
