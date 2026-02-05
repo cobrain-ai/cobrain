@@ -21,6 +21,8 @@ CoBrain is an AI-powered second brain that **eliminates manual organization**. J
 - 💬 **Conversational** - Ask questions naturally
 - 🔗 **Auto-linking** - AI builds your knowledge graph
 - ⚡ **Fast** - Local AI processes everything offline
+- 📱 **Multi-platform** - Web, Desktop (Tauri), Mobile (React Native)
+- 🔄 **Sync** - Multi-device synchronization with cr-sqlite
 
 ---
 
@@ -34,7 +36,7 @@ CoBrain is an AI-powered second brain that **eliminates manual organization**. J
 
 ### Installation
 
-\`\`\`bash
+```bash
 # Clone the repository
 git clone https://github.com/cobrain-ai/cobrain.git
 cd cobrain
@@ -44,7 +46,7 @@ pnpm install
 
 # Start development server
 pnpm dev
-\`\`\`
+```
 
 Open [http://localhost:3000](http://localhost:3000) to see CoBrain in action.
 
@@ -52,11 +54,49 @@ Open [http://localhost:3000](http://localhost:3000) to see CoBrain in action.
 
 1. **Install Ollama:** [ollama.com](https://ollama.com)
 2. **Pull required models:**
-   \`\`\`bash
+   ```bash
    ollama pull llama3:8b
    ollama pull nomic-embed-text
-   \`\`\`
+   ```
 3. **That's it!** CoBrain will auto-detect Ollama and start using local AI.
+
+---
+
+## 🖥️ Platform-Specific Setup
+
+### Web App
+```bash
+cd apps/web
+pnpm dev          # Development server at http://localhost:3000
+pnpm build        # Production build
+pnpm test         # Run tests
+```
+
+### Desktop App (Tauri)
+```bash
+cd apps/desktop
+pnpm dev          # Development with hot reload
+pnpm build        # Build for distribution
+```
+**Prerequisites:** [Rust](https://rustup.rs/) and Tauri CLI
+
+### Mobile App (Expo/React Native)
+```bash
+cd apps/mobile
+pnpm start        # Start Expo dev server
+pnpm android      # Run on Android emulator
+pnpm ios          # Run on iOS simulator (macOS only)
+pnpm web          # Run in browser
+```
+**Prerequisites:** Expo CLI, Android Studio or Xcode
+
+### Sync Server
+```bash
+cd packages/sync-server
+pnpm build        # Build the server
+pnpm start        # Run WebSocket sync server
+pnpm dev          # Development with watch mode
+```
 
 ---
 
@@ -65,9 +105,9 @@ Open [http://localhost:3000](http://localhost:3000) to see CoBrain in action.
 ### 1. Capture Anything
 Just type your thoughts. No categorization needed.
 
-\`\`\`
+```
 "Remind me to call John tomorrow at 2pm about the project proposal"
-\`\`\`
+```
 
 ### 2. AI Auto-Organization
 CoBrain's AI automatically:
@@ -78,16 +118,17 @@ CoBrain's AI automatically:
 ### 3. Ask Questions
 Use natural language to retrieve information:
 
-\`\`\`
+```
 "What did I say about the project?"
 "When should I call John?"
 "Show all notes from last week"
-\`\`\`
+```
 
-### 4. Get Proactive Reminders (Pro)
-CoBrain reminds you at the right time:
-- "Time to call John (2pm today)"
-- "Meeting in 10 min - here's what you discussed last time"
+### 4. Image OCR
+Upload images and extract text automatically:
+- Screenshots, whiteboard photos, handwritten notes
+- Privacy-first: processed locally with Tesseract.js
+- Extracted text is searchable and linked to your knowledge graph
 
 ---
 
@@ -95,62 +136,66 @@ CoBrain reminds you at the right time:
 
 CoBrain is built as a monorepo with:
 
-- **apps/web** - Next.js web application
-- **apps/desktop** - Electron wrapper (coming soon)
-- **apps/mobile** - React Native apps (coming soon)
-- **packages/core** - AI, graph, search logic
-- **packages/ui** - Shared React components
-- **packages/database** - Local storage & graph database
-- **packages/api-client** - Premium cloud API client
+```
+cobrain/
+├── apps/
+│   ├── web/          # Next.js 15 web application
+│   ├── desktop/      # Tauri desktop app (Windows, macOS, Linux)
+│   └── mobile/       # Expo React Native app (iOS, Android)
+├── packages/
+│   ├── core/         # Core types and utilities
+│   ├── database/     # Drizzle ORM + SQLite + cr-sqlite CRDT
+│   ├── ai/           # AI processing, entity extraction, embeddings
+│   ├── ocr/          # Image OCR with Tesseract.js
+│   ├── calendar/     # Calendar integration (Google, Outlook)
+│   ├── sync/         # CRDT sync engine
+│   ├── sync-server/  # WebSocket sync server
+│   └── ui/           # Shared React components
+└── docs/
+    └── prd/          # Product requirement documents
+```
 
 ### Tech Stack
 
-- **Frontend:** Next.js 15, React 19, TypeScript, Tailwind CSS
-- **AI:** Ollama, Llama 3, OpenAI (premium)
-- **Data:** SQLite, Graph database, Vector search
-- **Build:** Turborepo, pnpm
-
----
-
-## 🆓 Free vs Pro
-
-| Feature | Free (Local AI) | Pro (Cloud AI) |
-|---------|-----------------|----------------|
-| **Notes** | Unlimited | Unlimited |
-| **AI Processing** | Local (Llama 3) | Cloud (GPT-4/Claude) |
-| **Speed** | 10-30 seconds | < 2 seconds |
-| **Offline** | ✅ Full | ⚠️ Requires internet |
-| **Privacy** | ✅ 100% local | 🔐 Encrypted |
-| **Devices** | Desktop/Web | + Mobile apps |
-| **Sync** | ❌ Local only | ✅ Cloud sync |
-| **Proactive Notifications** | ❌ | ✅ |
-| **Price** | **Free** | **$10-12/month** |
+| Layer | Technology |
+|-------|------------|
+| **Frontend** | Next.js 15, React 19, TypeScript, Tailwind CSS |
+| **Mobile** | Expo SDK 52, React Native, NativeWind |
+| **Desktop** | Tauri 2.0, Rust |
+| **AI** | Ollama (Llama 3), OpenAI (optional), Tesseract.js |
+| **Database** | SQLite, Drizzle ORM, cr-sqlite (CRDT) |
+| **Sync** | WebSocket, cr-sqlite changesets |
+| **Build** | Turborepo, pnpm workspaces |
 
 ---
 
 ## 🗺️ Roadmap
 
-### Month 1-3: MVP (Complete ✅)
-- [x] Project setup
+### ✅ Completed
+- [x] Project setup & monorepo structure
 - [x] Basic note capture UI
 - [x] Local AI integration (Ollama)
-- [x] Entity extraction
+- [x] Entity extraction & knowledge graph
 - [x] Conversational search
-- [x] Graph visualization
+- [x] Graph visualization (React Flow)
+- [x] Multi-device sync architecture (cr-sqlite)
+- [x] Mobile app foundation (Expo)
+- [x] Desktop app foundation (Tauri)
+- [x] Calendar integration (Google, Outlook)
+- [x] View sharing with password protection
+- [x] Image OCR text extraction
 
-### Month 4-6: Desktop & Premium
-- [ ] Electron desktop app
-- [ ] Cloud AI integration
-- [ ] Premium tier launch
-- [ ] Cloud sync
-
-### Month 7-12: Mobile & Growth
-- [ ] React Native mobile apps
+### 🚧 In Progress
+- [ ] Voice input & transcription
 - [ ] Proactive notifications
-- [ ] Student tier
-- [ ] Team features
+- [ ] Browser extension
 
-[View full roadmap →](https://github.com/cobrain-ai/cobrain/projects/1)
+### 📋 Planned
+- [ ] Team collaboration
+- [ ] Plugin system
+- [ ] API for integrations
+
+[View all issues →](https://github.com/cobrain-ai/cobrain/issues)
 
 ---
 
@@ -168,7 +213,7 @@ We welcome contributions! CoBrain is built in public.
 
 ### Development
 
-\`\`\`bash
+```bash
 # Install dependencies
 pnpm install
 
@@ -177,6 +222,8 @@ pnpm dev
 
 # Start specific app
 pnpm --filter web dev
+pnpm --filter desktop dev
+pnpm --filter mobile start
 
 # Run tests
 pnpm test
@@ -186,7 +233,7 @@ pnpm lint
 
 # Format code
 pnpm format
-\`\`\`
+```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
@@ -194,50 +241,15 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ## 📄 License
 
-CoBrain uses a dual-license model to balance open source values with sustainable business:
+CoBrain is open-source under the [AGPL-3.0 License](LICENSE).
 
-| Component | License | Purpose |
-|-----------|---------|---------|
-| Core Application | [AGPL-3.0](LICENSE) | Open source, community-driven |
-| Premium Sync Server | [FSL-1.1](licenses/FSL-1.1.md) | Protected from competitors for 2 years |
-
-### Open Source (AGPL-3.0)
-
-Most of CoBrain is open-source under [AGPL-3.0](LICENSE):
-- `apps/` - Web, desktop, browser extension
-- `packages/core` - Core types and utilities
-- `packages/database` - Database layer (Drizzle + cr-sqlite)
-- `packages/ai` - AI processing and extraction
-- `packages/sync` - Sync engine and WebSocket client
-
-You can:
-- Use, modify, and distribute the software freely
-- Run it for personal or internal business use
-- Self-host everything, including your own sync server
-- Contribute improvements back to the community
+### What You Can Do
+- ✅ Use, modify, and distribute the software freely
+- ✅ Run it for personal or business use
+- ✅ Self-host everything including sync server
+- ✅ Contribute improvements back to the community
 
 **Note:** If you modify CoBrain and offer it as a network service, you must release your source code under AGPL-3.0.
-
-### Functional Source License (FSL-1.1)
-
-The premium sync server uses [FSL-1.1](licenses/FSL-1.1.md):
-- `packages/sync-server` - WebSocket sync server
-
-**What FSL means:**
-- ✅ You can view, read, and learn from the code
-- ✅ You can modify and self-host for personal/internal use
-- ❌ You cannot offer a competing commercial sync service
-- ✅ After 2 years, the code becomes Apache 2.0 (fully open)
-
-This protects our ability to offer premium sync while keeping all code visible and auditable.
-
-### Commercial License
-
-For organizations that need to offer CoBrain-based services without open-source obligations, we offer commercial licenses. Contact us for details.
-
-### Contributing
-
-By contributing to CoBrain, you agree to license your contributions under the same license as the component you're contributing to (AGPL-3.0 for most packages, FSL-1.1 for sync-server).
 
 ---
 
@@ -258,14 +270,14 @@ Existing note-taking apps require you to:
 - ✅ **Proactive reminders** - Information surfaces when needed
 - ✅ **Free + Private** - Local AI, no cloud required
 - ✅ **Open-source** - Transparent, auditable, extendable
+- ✅ **Multi-platform** - Web, desktop, and mobile
 
 ---
 
 ## 💬 Community
 
-- **Twitter:** [@cobrain_ai](https://twitter.com/cobrain_ai)
-- **Discord:** [Join our community](https://discord.gg/cobrain)
-- **Discussions:** [GitHub Discussions](https://github.com/cobrain-ai/cobrain/discussions)
+- **GitHub Discussions:** [Join the conversation](https://github.com/cobrain-ai/cobrain/discussions)
+- **Issues:** [Report bugs or request features](https://github.com/cobrain-ai/cobrain/issues)
 
 ---
 
@@ -273,7 +285,6 @@ Existing note-taking apps require you to:
 
 CoBrain is inspired by:
 - Building a Second Brain (Tiago Forte)
-- Mem AI's proactive notifications
 - Obsidian's local-first philosophy
 - Notion's ease of use
 
@@ -285,4 +296,4 @@ Special thanks to all [contributors](https://github.com/cobrain-ai/cobrain/graph
 
 *Like GitHub Copilot for your code, CoBrain is a co-pilot for your thoughts.*
 
-[⭐ Star us on GitHub](https://github.com/cobrain-ai/cobrain) • [📖 Read the docs](https://docs.cobrain.ai) • [🚀 Try CoBrain](https://cobrain.ai)
+[⭐ Star us on GitHub](https://github.com/cobrain-ai/cobrain)
