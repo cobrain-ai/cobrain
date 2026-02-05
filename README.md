@@ -35,10 +35,8 @@ Download the latest version for your platform:
 | Platform | Download |
 |----------|----------|
 | **Windows** | [CoBrain-Setup.exe](https://github.com/cobrain-ai/cobrain/releases/latest) |
-| **macOS (Intel)** | [CoBrain.dmg](https://github.com/cobrain-ai/cobrain/releases/latest) |
-| **macOS (Apple Silicon)** | [CoBrain-arm64.dmg](https://github.com/cobrain-ai/cobrain/releases/latest) |
-| **Linux (Debian/Ubuntu)** | [CoBrain.deb](https://github.com/cobrain-ai/cobrain/releases/latest) |
-| **Linux (AppImage)** | [CoBrain.AppImage](https://github.com/cobrain-ai/cobrain/releases/latest) |
+| **macOS** | Coming soon |
+| **Linux** | Coming soon |
 
 ### Mobile App
 
@@ -284,7 +282,6 @@ CoBrain uses a multi-license approach:
 |-----------|---------|-------------|
 | Main codebase | [AGPL-3.0](LICENSE) | Apps, packages, and most code |
 | Sync Server | [FSL-1.1-Apache-2.0](packages/sync-server/LICENSE) | Converts to Apache 2.0 after 2 years |
-| Cloud Services | Proprietary | `services/` directory |
 
 ### What You Can Do
 - ✅ Use, modify, and distribute the main codebase freely
