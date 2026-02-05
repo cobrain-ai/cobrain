@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useEffect, useCallback } from 'react'
 import type { LLMProvider, HealthCheckResult } from '../types/index.js'
 import { getGlobalRegistry } from '../providers/registry.js'
