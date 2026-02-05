@@ -52,13 +52,6 @@
           "color": "#2563eb"
         }
       ],
-      [
-        "@react-native-voice/voice",
-        {
-          "microphonePermission": "Allow CoBrain to access the microphone for voice input.",
-          "speechRecognitionPermission": "Allow CoBrain to use speech recognition for voice notes."
-        }
-      ],
       "expo-sqlite"
     ],
     "experiments": {
