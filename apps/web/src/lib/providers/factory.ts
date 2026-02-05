@@ -3,8 +3,8 @@
  */
 
 import { ProviderFactory, type LLMProvider } from '@cobrain/core'
-import { DEFAULT_MODELS, DEFAULT_OLLAMA_URL, DEFAULT_CLI_PATH } from './constants.js'
-import type { ProviderConfig, ProviderType } from './types.js'
+import { DEFAULT_MODELS, DEFAULT_OLLAMA_URL, DEFAULT_CLI_PATH } from './constants'
+import type { ProviderConfig, ProviderType } from './types'
 
 export interface CreateProviderOptions {
   type: ProviderType

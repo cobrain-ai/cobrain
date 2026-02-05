@@ -3,8 +3,8 @@
  * TODO: Replace with database persistence
  */
 
-import { getDefaultProviderConfigs } from './providers/constants.js'
-import type { ProviderConfig, UserProviderConfig } from './providers/types.js'
+import { getDefaultProviderConfigs } from './providers/constants'
+import type { ProviderConfig, UserProviderConfig } from './providers/types'
 
 // Re-export types for convenience
 export type { ProviderConfig, UserProviderConfig }

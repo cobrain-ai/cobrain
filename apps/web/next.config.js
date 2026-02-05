@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ['@cobrain/core', '@cobrain/ui'],
+  transpilePackages: ['@cobrain/core', '@cobrain/ai', '@cobrain/database', '@cobrain/ui'],
   // Enable static export for desktop app (Tauri)
   output: process.env.STATIC_EXPORT === 'true' ? 'export' : undefined,
   // Required for static export

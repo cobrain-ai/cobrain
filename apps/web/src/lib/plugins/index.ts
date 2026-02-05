@@ -6,4 +6,4 @@ export {
   saveEnabledPlugins,
   getPluginConfig,
   savePluginConfig,
-} from './init.js'
+} from './init'

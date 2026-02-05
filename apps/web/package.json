@@ -13,6 +13,8 @@
     "clean": "rm -rf .next node_modules"
   },
   "dependencies": {
+    "@cobrain/ai": "workspace:*",
+    "@cobrain/core": "workspace:*",
     "@cobrain/database": "workspace:*",
     "@cobrain/ocr": "workspace:*",
     "@xyflow/react": "^12.4.0",

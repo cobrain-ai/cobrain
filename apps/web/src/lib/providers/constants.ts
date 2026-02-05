@@ -2,7 +2,7 @@
  * Provider-related constants and configuration defaults
  */
 
-import type { ProviderInfo, ProviderConfig, ProviderConnectionStatus } from './types.js'
+import type { ProviderInfo, ProviderConfig, ProviderConnectionStatus } from './types'
 
 /**
  * Static provider metadata
