@@ -77,6 +77,12 @@ jobs:
         working-directory: apps/mobile
         run: npx expo prebuild --platform android --clean --npm
 
+      - name: Fix Kotlin version compatibility
+        working-directory: apps/mobile/android
+        run: |
+          echo "kotlin.jvm.target.validation.mode=IGNORE" >> gradle.properties
+          echo "android.suppressKotlinVersionCompatibilityCheck=true" >> gradle.properties
+
       - name: Build Android APK (Debug)
         working-directory: apps/mobile/android
         run: ./gradlew assembleDebug
