@@ -8,3 +8,4 @@ export { QuickCapture } from './quick-capture'
 export type { QuickCaptureProps } from './quick-capture'
 
 export { ImageOCR } from './image-ocr'
+export type { ImageOCRProps } from './image-ocr'

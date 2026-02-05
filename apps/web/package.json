@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@cobrain/database": "workspace:*",
+    "@cobrain/ocr": "workspace:*",
     "@xyflow/react": "^12.4.0",
     "bcryptjs": "^2.4.3",
     "lucide-react": "^0.454.0",
@@ -21,6 +22,7 @@
     "next-auth": "^5.0.0-beta.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "tesseract.js": "^5.1.1",
     "zod": "^3.22.4"
   },
   "devDependencies": {
