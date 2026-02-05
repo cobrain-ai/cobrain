@@ -2,6 +2,6 @@
  * Provider utilities barrel export
  */
 
-export * from './types.js'
-export * from './constants.js'
-export * from './factory.js'
+export * from './types'
+export * from './constants'
+export * from './factory'
