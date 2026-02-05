@@ -1,0 +1,42 @@
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Node
+node_modules/
+
+# Native builds
+android/
+ios/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Metro
+.metro-health-check*
+
+# Build artifacts
+*.hprof
+
+# Secrets
+.env
+.env.*
+
+# Editor
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+*.pem
+
+# Testing
+coverage/
+
+# Turborepo
+.turbo/

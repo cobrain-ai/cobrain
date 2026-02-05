@@ -15,7 +15,7 @@
     "type": "git",
     "url": "https://github.com/cobrain-ai/cobrain"
   },
-  "license": "MIT",
+  "license": "AGPL-3.0",
   "author": "CoBrain Team",
   "workspaces": [
     "apps/*",
