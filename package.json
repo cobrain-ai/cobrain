@@ -31,7 +31,10 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "clean": "turbo run clean && rm -rf node_modules",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "build:desktop": "STATIC_EXPORT=true pnpm --filter web build && cp -r apps/web/out apps/desktop/dist && pnpm --filter desktop build",
+    "build:android": "cd apps/mobile && npx expo prebuild --platform android && cd android && ./gradlew assembleRelease",
+    "release": "echo 'Push a tag (git tag v0.1.0 && git push origin v0.1.0) to trigger GitHub Actions release'"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^6.19.0",

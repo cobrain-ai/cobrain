@@ -26,6 +26,31 @@ CoBrain is an AI-powered second brain that **eliminates manual organization**. J
 
 ---
 
+## 📥 Downloads
+
+### Desktop App
+
+Download the latest version for your platform:
+
+| Platform | Download |
+|----------|----------|
+| **Windows** | [CoBrain-Setup.exe](https://github.com/cobrain-ai/cobrain/releases/latest) |
+| **macOS (Intel)** | [CoBrain.dmg](https://github.com/cobrain-ai/cobrain/releases/latest) |
+| **macOS (Apple Silicon)** | [CoBrain-arm64.dmg](https://github.com/cobrain-ai/cobrain/releases/latest) |
+| **Linux (Debian/Ubuntu)** | [CoBrain.deb](https://github.com/cobrain-ai/cobrain/releases/latest) |
+| **Linux (AppImage)** | [CoBrain.AppImage](https://github.com/cobrain-ai/cobrain/releases/latest) |
+
+### Mobile App
+
+| Platform | Download |
+|----------|----------|
+| **Android** | [CoBrain.apk](https://github.com/cobrain-ai/cobrain/releases/latest) |
+| **iOS** | Coming soon (TestFlight) |
+
+> **Note:** All downloads are available on the [Releases page](https://github.com/cobrain-ai/cobrain/releases).
+
+---
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -96,6 +121,18 @@ cd packages/sync-server
 pnpm build        # Build the server
 pnpm start        # Run WebSocket sync server
 pnpm dev          # Development with watch mode
+```
+
+### Building Installers
+
+Build release packages locally:
+
+```bash
+# Desktop (requires Rust)
+pnpm build:desktop
+
+# Android APK (requires Android SDK)
+pnpm build:android
 ```
 
 ---
@@ -241,15 +278,23 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ## 📄 License
 
-CoBrain is open-source under the [AGPL-3.0 License](LICENSE).
+CoBrain uses a multi-license approach:
+
+| Component | License | Description |
+|-----------|---------|-------------|
+| Main codebase | [AGPL-3.0](LICENSE) | Apps, packages, and most code |
+| Sync Server | [FSL-1.1-Apache-2.0](packages/sync-server/LICENSE) | Converts to Apache 2.0 after 2 years |
+| Cloud Services | Proprietary | `services/` directory |
 
 ### What You Can Do
-- ✅ Use, modify, and distribute the software freely
-- ✅ Run it for personal or business use
-- ✅ Self-host everything including sync server
+- ✅ Use, modify, and distribute the main codebase freely
+- ✅ Run everything for personal or business use
+- ✅ Self-host the sync server for your own use
 - ✅ Contribute improvements back to the community
 
-**Note:** If you modify CoBrain and offer it as a network service, you must release your source code under AGPL-3.0.
+### Restrictions
+- If you modify CoBrain and offer it as a network service, you must release your source code under AGPL-3.0
+- The sync server cannot be used to build a competing commercial sync/backup service (FSL restriction)
 
 ---
 
