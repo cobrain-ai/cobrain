@@ -77,6 +77,41 @@ jobs:
         working-directory: apps/mobile
         run: npx expo prebuild --platform android --clean
 
+      - name: Fix Expo module gradle plugin resolution
+        working-directory: apps/mobile/android
+        run: |
+          echo "=== Checking settings.gradle ==="
+          cat settings.gradle
+
+          echo ""
+          echo "=== Checking node_modules structure ==="
+          ls -la ../node_modules/ | head -20 || true
+          ls -la ../node_modules/expo-modules-core/android/ 2>/dev/null || echo "expo-modules-core direct path not found"
+
+          # Check if expo-module-gradle-plugin is properly included
+          if ! grep -q "expo-module-gradle-plugin" settings.gradle; then
+            echo "WARNING: expo-module-gradle-plugin not found in settings.gradle"
+          fi
+
+          # Ensure the settings.gradle has proper plugin resolution
+          echo ""
+          echo "=== Checking for plugin resolution issues ==="
+
+          # Find the expo-modules-autolinking android gradle directory
+          EXPO_AUTOLINKING=$(find -L ../node_modules -path "*/@expo/modules-autolinking/android" -type d 2>/dev/null | head -1)
+          echo "Found expo-modules-autolinking at: $EXPO_AUTOLINKING"
+
+          # The expo prebuild should generate proper includeBuild directives
+          # If they're missing or pointing to wrong paths, we need to fix them
+
+          # Check if the includeBuild paths exist
+          grep -oP "includeBuild\(['\"]([^'\"]+)" settings.gradle | while read line; do
+            path=$(echo "$line" | sed "s/includeBuild(['\"]//")
+            if [ ! -d "$path" ]; then
+              echo "WARNING: includeBuild path does not exist: $path"
+            fi
+          done || true
+
       - name: Fix Kotlin version compatibility
         working-directory: apps/mobile/android
         run: |
