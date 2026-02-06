@@ -117,6 +117,18 @@ jobs:
           grep -n 'cobrain' package.json || true
           grep -n 'cobrain' ../../packages/database/package.json || true
 
+          # Prevent npm from discovering the pnpm workspace root
+          # npm walks up to find root package.json with "workspaces" and tries to resolve all workspace:* refs
+          rm -f ../../pnpm-workspace.yaml
+          python3 -c "
+          import json
+          with open('../../package.json') as f:
+              pkg = json.load(f)
+          pkg.pop('workspaces', None)
+          with open('../../package.json', 'w') as f:
+              json.dump(pkg, f, indent=2)
+          "
+
           rm -rf node_modules
           npm install --legacy-peer-deps
           echo "=== Verifying key native modules ==="
