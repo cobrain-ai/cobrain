@@ -115,16 +115,14 @@ jobs:
               echo "CRITICAL: Cannot find expo-modules-core build.gradle"
               echo "Adding suppressKotlinVersionCompatibilityCheck to all Kotlin compile tasks..."
               # Fallback: add allprojects block to root build.gradle to suppress version check
-              cat >> build.gradle << 'PATCH'
-
-allprojects {
-    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-        compilerOptions {
-            freeCompilerArgs.addAll(['-P', 'plugin:androidx.compose.compiler.plugins.kotlin:suppressKotlinVersionCompatibilityCheck=1.9.24'])
-        }
-    }
-}
-PATCH
+              echo "" >> build.gradle
+              echo "allprojects {" >> build.gradle
+              echo "    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {" >> build.gradle
+              echo "        compilerOptions {" >> build.gradle
+              echo "            freeCompilerArgs.addAll(['-P', 'plugin:androidx.compose.compiler.plugins.kotlin:suppressKotlinVersionCompatibilityCheck=1.9.24'])" >> build.gradle
+              echo "        }" >> build.gradle
+              echo "    }" >> build.gradle
+              echo "}" >> build.gradle
               echo "Applied fallback patch to suppress Kotlin version check"
             fi
           fi
