@@ -62,12 +62,8 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install dependencies (hoisted for React Native compatibility)
-        run: |
-          # React Native / Expo requires flat node_modules for CMake native module resolution
-          # Use node-linker=hoisted only for this CI build
-          echo "node-linker=hoisted" > .npmrc
-          pnpm install --no-frozen-lockfile
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build workspace dependencies
         run: |
