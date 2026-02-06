@@ -88,42 +88,32 @@ jobs:
           echo "" >> gradle.properties
           echo "kotlin.jvm.target.validation.mode=IGNORE" >> gradle.properties
 
-          # Patch expo-modules-core build.gradle to hardcode compose compiler version
-          # The file is in node_modules after prebuild; search everywhere under the mobile app
+          # With shamefully-hoist=true, expo-modules-core is in root node_modules
           echo "Searching for expo-modules-core build.gradle..."
-          EXPO_CORE_GRADLE=$(find -L .. -path "*/expo-modules-core/android/build.gradle" -type f 2>/dev/null | head -1)
-          if [ -n "$EXPO_CORE_GRADLE" ]; then
-            echo "Found expo-modules-core at: $EXPO_CORE_GRADLE"
-            echo "=== Before patch ==="
-            grep -n "kotlinCompilerExtensionVersion\|composeOptions\|versionsMap" "$EXPO_CORE_GRADLE" || true
-            # Replace versionsMap lookup with hardcoded version for Kotlin 1.9.24
-            sed -i 's/kotlinCompilerExtensionVersion = versionsMap\[kotlinVersion()\]/kotlinCompilerExtensionVersion = "1.5.14"/' "$EXPO_CORE_GRADLE"
-            echo "=== After patch ==="
-            grep -n "kotlinCompilerExtensionVersion\|composeOptions\|versionsMap" "$EXPO_CORE_GRADLE" || true
+
+          # Try root node_modules first (shamefully-hoist structure)
+          ROOT_PATH="../../../node_modules/expo-modules-core/android/build.gradle"
+          # Then try local node_modules
+          LOCAL_PATH="../node_modules/expo-modules-core/android/build.gradle"
+
+          if [ -f "$ROOT_PATH" ]; then
+            echo "Found expo-modules-core at root: $ROOT_PATH"
+            sed -i 's/kotlinCompilerExtensionVersion = versionsMap\[kotlinVersion()\]/kotlinCompilerExtensionVersion = "1.5.14"/' "$ROOT_PATH"
+            grep -n "kotlinCompilerExtensionVersion" "$ROOT_PATH" || true
+          elif [ -f "$LOCAL_PATH" ]; then
+            echo "Found expo-modules-core at local: $LOCAL_PATH"
+            sed -i 's/kotlinCompilerExtensionVersion = versionsMap\[kotlinVersion()\]/kotlinCompilerExtensionVersion = "1.5.14"/' "$LOCAL_PATH"
+            grep -n "kotlinCompilerExtensionVersion" "$LOCAL_PATH" || true
           else
-            echo "WARNING: expo-modules-core build.gradle not found via find"
-            echo "Listing node_modules structure..."
-            ls -la ../node_modules/ | head -20
-            ls -la ../node_modules/expo-modules-core/android/ 2>/dev/null || echo "Direct path not found"
-            # Try direct known path
-            DIRECT_PATH="../node_modules/expo-modules-core/android/build.gradle"
-            if [ -f "$DIRECT_PATH" ]; then
-              echo "Found via direct path: $DIRECT_PATH"
-              sed -i 's/kotlinCompilerExtensionVersion = versionsMap\[kotlinVersion()\]/kotlinCompilerExtensionVersion = "1.5.14"/' "$DIRECT_PATH"
-              grep -n "kotlinCompilerExtensionVersion" "$DIRECT_PATH" || true
+            echo "Searching with find..."
+            EXPO_CORE_GRADLE=$(find -L ../../.. -path "*/expo-modules-core/android/build.gradle" -type f 2>/dev/null | head -1)
+            if [ -n "$EXPO_CORE_GRADLE" ]; then
+              echo "Found expo-modules-core at: $EXPO_CORE_GRADLE"
+              sed -i 's/kotlinCompilerExtensionVersion = versionsMap\[kotlinVersion()\]/kotlinCompilerExtensionVersion = "1.5.14"/' "$EXPO_CORE_GRADLE"
             else
-              echo "CRITICAL: Cannot find expo-modules-core build.gradle"
-              echo "Adding suppressKotlinVersionCompatibilityCheck to all Kotlin compile tasks..."
-              # Fallback: add allprojects block to root build.gradle to suppress version check
-              echo "" >> build.gradle
-              echo "allprojects {" >> build.gradle
-              echo "    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {" >> build.gradle
-              echo "        compilerOptions {" >> build.gradle
-              echo "            freeCompilerArgs.addAll(['-P', 'plugin:androidx.compose.compiler.plugins.kotlin:suppressKotlinVersionCompatibilityCheck=1.9.24'])" >> build.gradle
-              echo "        }" >> build.gradle
-              echo "    }" >> build.gradle
-              echo "}" >> build.gradle
-              echo "Applied fallback patch to suppress Kotlin version check"
+              echo "WARNING: expo-modules-core build.gradle not found"
+              echo "Listing root node_modules..."
+              ls -la ../../../node_modules/ | head -20 || true
             fi
           fi
 
