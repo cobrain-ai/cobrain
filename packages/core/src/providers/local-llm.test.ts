@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { LocalLLMProvider } from './local-llm.js'
-import type { LocalLLMBridge, DownloadedModel, LocalModel, ModelDownloadProgress } from '../types/index.js'
+import type { LocalLLMBridge, DownloadedModel } from '../types/index.js'
 
 function createMockBridge(overrides: Partial<LocalLLMBridge> = {}): LocalLLMBridge {
   return {

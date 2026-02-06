@@ -21,8 +21,16 @@ async function ensureModelsDir(): Promise<void> {
   }
 }
 
+function sanitizeModelId(modelId: string): string {
+  const sanitized = modelId.replace(/[^a-zA-Z0-9._-]/g, '')
+  if (!sanitized || sanitized !== modelId) {
+    throw new Error(`Invalid model ID: ${modelId}`)
+  }
+  return sanitized
+}
+
 function getModelPath(modelId: string): string {
-  return `${MODELS_DIR}${modelId}`
+  return `${MODELS_DIR}${sanitizeModelId(modelId)}`
 }
 
 export async function downloadModel(

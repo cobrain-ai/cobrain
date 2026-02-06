@@ -1,10 +1,8 @@
 import { create } from 'zustand'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type {
-  LocalModel,
   DownloadedModel,
   ModelDownloadProgress,
-  ModelDownloadStatus,
 } from '@cobrain/core/src/types'
 
 interface LocalLLMState {

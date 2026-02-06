@@ -76,19 +76,24 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 }))
 
+let cachedProvider: LocalLLMProvider | null = null
+let cachedModelId: string | null = null
+
 async function getLocalLLMResponse(content: string): Promise<string> {
   const { activeModelId } = useLocalLLMStore.getState()
   if (!activeModelId) {
     throw new Error('No local model selected. Go to Settings > AI Settings > Manage Models.')
   }
 
-  const provider = new LocalLLMProvider()
-  const bridge = getLocalLLMBridge()
-  provider.setBridge(bridge)
-  provider.setActiveModel(activeModelId)
-  await provider.initialize()
+  if (!cachedProvider || cachedModelId !== activeModelId) {
+    cachedProvider = new LocalLLMProvider()
+    cachedProvider.setBridge(getLocalLLMBridge())
+    cachedProvider.setActiveModel(activeModelId)
+    await cachedProvider.initialize()
+    cachedModelId = activeModelId
+  }
 
-  const response = await provider.complete([
+  const response = await cachedProvider.complete([
     { role: 'system', content: 'You are CoBrain, a helpful AI thinking partner. Keep responses concise and helpful.' },
     { role: 'user', content },
   ])

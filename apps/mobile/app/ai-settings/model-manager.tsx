@@ -166,12 +166,15 @@ export default function ModelManagerScreen() {
   const {
     downloadedModels,
     activeModelId,
+    currentDownload,
     loadState,
     setActiveModel,
     addDownloadedModel,
     removeDownloadedModel,
     setDownloadProgress,
   } = useLocalLLMStore()
+
+  const isDownloading = currentDownload?.status === 'downloading'
 
   useEffect(() => {
     loadState()
@@ -184,7 +187,6 @@ export default function ModelManagerScreen() {
   const borderColor = isDark ? 'border-slate-800' : 'border-gray-100'
 
   const availableModels = getAvailableModels()
-  const downloadedIds = new Set(downloadedModels.map((m) => m.id))
 
   // On iOS, apple-foundation is always "downloaded" (built-in)
   const isAppleBuiltIn = Platform.OS === 'ios'
@@ -229,6 +231,7 @@ export default function ModelManagerScreen() {
   }
 
   function handleDownload(model: LocalModel) {
+    if (isDownloading) return
     Alert.alert(
       'Download Model',
       `Download "${model.name}" (${formatModelSize(model.sizeBytes)})?\n\nThis requires a Wi-Fi connection and may take several minutes.`,
