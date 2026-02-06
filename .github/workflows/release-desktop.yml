@@ -93,10 +93,10 @@ jobs:
         run: pnpm run build --filter=@cobrain/core --filter=@cobrain/database --filter=@cobrain/ai --filter=@cobrain/ui
 
       - name: Build web app for static export
-        run: pnpm --filter web build
+        shell: bash
+        run: cd apps/web && bash scripts/build-static.sh
         env:
           NEXT_TELEMETRY_DISABLED: 1
-          STATIC_EXPORT: 'true'
 
       - name: Copy web build to desktop
         shell: bash

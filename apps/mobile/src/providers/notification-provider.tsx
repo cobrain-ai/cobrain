@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import * as Notifications from 'expo-notifications'
+import { SchedulableTriggerInputTypes } from 'expo-notifications'
 import { Platform } from 'react-native'
 
 // Configure notification handling
@@ -102,10 +103,10 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     body: string,
     triggerDate: Date
   ): Promise<string> => {
-    const trigger =
+    const trigger: Notifications.NotificationTriggerInput =
       triggerDate.getTime() - Date.now() > 0
-        ? { date: triggerDate }
-        : { seconds: 1 } // Immediate if date is in the past
+        ? { type: SchedulableTriggerInputTypes.DATE, date: triggerDate }
+        : { type: SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 1 } // Immediate if date is in the past
 
     const id = await Notifications.scheduleNotificationAsync({
       content: {

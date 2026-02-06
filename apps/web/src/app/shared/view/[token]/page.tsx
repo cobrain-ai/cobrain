@@ -179,6 +179,12 @@ export default async function SharedViewPage({
   )
 }
 
+export const dynamic = 'force-static'
+
+export async function generateStaticParams() {
+  return []
+}
+
 export async function generateMetadata({ params }: SharedViewPageProps) {
   const { token } = await params
   const viewData = await getSharedView(token)
