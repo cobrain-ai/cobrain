@@ -93,7 +93,6 @@ async function testProviderConnection(
       status: 'connected',
       available: true,
       latency: Date.now() - start,
-      model: provider.getModel(),
       testResponse: testResponse.content.substring(0, 100),
     } satisfies ProviderTestResult)
   } catch (error) {

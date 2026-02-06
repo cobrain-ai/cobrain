@@ -35,14 +35,12 @@ async function checkProviderStatus(providerInfo: ProviderInfo): Promise<Provider
     const latency = Date.now() - start
 
     if (available) {
-      const model = provider.getModel()
       await provider.dispose()
       return {
         ...providerInfo,
         status: 'connected',
         available: true,
         latency,
-        model,
       }
     }
 

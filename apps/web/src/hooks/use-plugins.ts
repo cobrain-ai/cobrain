@@ -7,7 +7,6 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import {
   getPluginRegistry,
   type Plugin,
-  type PluginManifest,
   type PluginConfig,
   type PluginState,
   type PluginRegistryEvent,

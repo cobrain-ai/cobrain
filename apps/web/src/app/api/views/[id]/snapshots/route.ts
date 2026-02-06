@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@/lib/auth'
 import { prisma } from '@cobrain/database'
 
 interface RouteParams {
@@ -13,7 +12,7 @@ interface RouteParams {
  */
 export async function GET(request: Request, { params }: RouteParams) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -60,7 +59,7 @@ export async function GET(request: Request, { params }: RouteParams) {
  */
 export async function POST(request: Request, { params }: RouteParams) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -141,7 +140,7 @@ async function executeViewQuery(
   }
 
   const notes = await prisma.note.findMany({
-    where: where as Parameters<typeof prisma.note.findMany>[0]['where'],
+    where,
     orderBy: { createdAt: 'desc' },
     take: 100,
     select: {
@@ -153,7 +152,8 @@ async function executeViewQuery(
     },
   })
 
-  return notes.map((n) => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return notes.map((n: any) => ({
     id: n.id,
     content: n.content,
     createdAt: n.createdAt.toISOString(),

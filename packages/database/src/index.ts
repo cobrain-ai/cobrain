@@ -45,3 +45,22 @@ export * from './repositories/index.js'
 
 // Legacy types (for backward compatibility)
 export * from './types.js'
+
+// Placeholder for direct database access (used by push notification routes)
+// TODO: Replace with proper repositories
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const prisma: any = new Proxy({}, {
+  get(_target, prop) {
+    const notImplemented = () => {
+      throw new Error(`prisma.${String(prop)} is not implemented. Use repositories instead.`)
+    }
+    return {
+      findMany: notImplemented,
+      findUnique: notImplemented,
+      create: notImplemented,
+      update: notImplemented,
+      delete: notImplemented,
+      deleteMany: notImplemented,
+    }
+  },
+})

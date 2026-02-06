@@ -8,12 +8,14 @@ export interface EntityNodeData {
   outDegree: number
   isSelected?: boolean
   isHighlighted?: boolean
+  [key: string]: unknown
 }
 
 // React Flow edge data
 export interface RelationEdgeData {
   relation: EntityRelation
   isHighlighted?: boolean
+  [key: string]: unknown
 }
 
 // Graph API response types

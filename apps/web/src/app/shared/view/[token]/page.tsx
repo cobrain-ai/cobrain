@@ -1,5 +1,4 @@
-import { notFound, redirect } from 'next/navigation'
-import { headers } from 'next/headers'
+import { notFound } from 'next/navigation'
 import { SharedViewClient } from './client'
 
 interface SharedViewPageProps {

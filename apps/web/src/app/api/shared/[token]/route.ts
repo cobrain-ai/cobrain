@@ -98,7 +98,7 @@ async function executeViewQuery(query: ViewQuery, userId: string) {
     (query.entityTypes && query.entityTypes.length > 0) ||
     (query.entityNames && query.entityNames.length > 0)
   ) {
-    let entities: Array<{ id: string }> = []
+    const entities: Array<{ id: string }> = []
 
     if (query.entityTypes && query.entityTypes.length > 0) {
       for (const type of query.entityTypes) {

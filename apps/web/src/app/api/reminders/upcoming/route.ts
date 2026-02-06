@@ -43,7 +43,8 @@ export async function GET(request: Request) {
       take: 20,
     })
 
-    const formatted = reminders.map((r) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const formatted = reminders.map((r: any) => ({
       id: r.id,
       message: r.message,
       triggerAt: r.triggerAt.toISOString(),

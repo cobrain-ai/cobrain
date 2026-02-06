@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth'
 import { remindersRepository } from '@cobrain/database'
 
 interface RouteParams {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {
@@ -14,7 +14,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
     const { action } = body
 
@@ -28,10 +28,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       case 'triggered':
         await remindersRepository.markTriggered(id)
         break
-      default:
+      default: {
         // Update reminder fields
         const reminder = await remindersRepository.update(id, body)
         return NextResponse.json({ reminder })
+      }
     }
 
     return NextResponse.json({ success: true })
@@ -52,7 +53,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id } = params
+    const { id } = await params
     await remindersRepository.delete(id)
 
     return NextResponse.json({ success: true })

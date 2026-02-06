@@ -37,14 +37,10 @@ export async function POST(request: Request) {
     // }
 
     // Hash password with bcrypt (10+ rounds as per security requirements)
-    const hashedPassword = await hash(password, 12)
-
-    // TODO: Create user in database
-    // const user = await usersRepository.create({
-    //   name,
-    //   email,
-    //   password: hashedPassword,
-    // })
+    // TODO: Create user in database when repository is available
+    // const hashedPassword = await hash(password, 12)
+    // const user = await usersRepository.create({ name, email, password: hashedPassword })
+    await hash(password, 12)
 
     // For now, return success (mock implementation)
     return NextResponse.json(

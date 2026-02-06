@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@/lib/auth'
 import { prisma } from '@cobrain/database'
 
 // Note: In production, you would use the 'web-push' library
@@ -21,7 +20,7 @@ interface PushPayload {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -54,7 +53,7 @@ export async function POST(request: Request) {
 
     // Send to all subscriptions
     const results = await Promise.allSettled(
-      subscriptions.map((sub) => sendPushNotification(sub, payload))
+      subscriptions.map((sub: { endpoint: string; keys: unknown }) => sendPushNotification(sub, payload))
     )
 
     const successful = results.filter((r) => r.status === 'fulfilled').length
@@ -62,14 +61,14 @@ export async function POST(request: Request) {
 
     // Clean up failed subscriptions (expired endpoints)
     const failedSubscriptions = results
-      .map((r, i) => (r.status === 'rejected' ? subscriptions[i] : null))
+      .map((r: PromiseSettledResult<void>, i: number) => (r.status === 'rejected' ? subscriptions[i] : null))
       .filter(Boolean)
 
     if (failedSubscriptions.length > 0) {
       await prisma.pushSubscription.deleteMany({
         where: {
           id: {
-            in: failedSubscriptions.map((s) => s!.id),
+            in: failedSubscriptions.map((s: { id: string }) => s.id),
           },
         },
       })
@@ -90,24 +89,13 @@ export async function POST(request: Request) {
   }
 }
 
-interface Subscription {
-  endpoint: string
-  keys: {
-    p256dh: string
-    auth: string
-  }
-}
-
 async function sendPushNotification(
   subscription: { endpoint: string; keys: unknown },
   payload: PushPayload
 ): Promise<void> {
-  const keys = subscription.keys as { p256dh: string; auth: string }
-
   // Get VAPID keys from environment
   const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
   const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY
-  const vapidSubject = process.env.VAPID_SUBJECT || 'mailto:admin@cobrain.ai'
 
   if (!vapidPublicKey || !vapidPrivateKey) {
     // In development without VAPID keys, just log the notification

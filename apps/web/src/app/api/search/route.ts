@@ -3,7 +3,6 @@ import { auth } from '@/lib/auth'
 import { z } from 'zod'
 import { notesRepository, embeddingsRepository } from '@cobrain/database'
 import { search as semanticSearch, keywordSearch } from '@cobrain/ai'
-import type { Note } from '@cobrain/core'
 
 const searchSchema = z.object({
   query: z.string().min(1, 'Query is required'),
@@ -22,32 +21,6 @@ const searchSchema = z.object({
     })
     .optional(),
 })
-
-// Convert database note to core Note type
-function toNote(dbNote: {
-  id: string
-  content: string
-  rawContent: string | null
-  createdAt: Date
-  updatedAt: Date
-  isPinned: boolean
-  isArchived: boolean
-  source: string
-}): Note {
-  return {
-    id: dbNote.id,
-    content: dbNote.content,
-    rawContent: dbNote.rawContent ?? undefined,
-    entities: [],
-    createdAt: dbNote.createdAt,
-    updatedAt: dbNote.updatedAt,
-    metadata: {
-      source: dbNote.source as 'text' | 'voice' | 'import',
-      isPinned: dbNote.isPinned,
-      isArchived: dbNote.isArchived,
-    },
-  }
-}
 
 // Get embedding for query using Ollama
 async function getEmbedding(text: string): Promise<number[]> {
@@ -106,7 +79,7 @@ export async function POST(request: Request) {
       })
     }
 
-    const notes = dbNotes.map(toNote)
+    const notes = dbNotes
 
     // Apply date filters if provided
     let filteredNotes = notes
@@ -144,8 +117,20 @@ export async function POST(request: Request) {
             : undefined,
         }))
 
+        const searchFilters = filters
+          ? {
+              ...filters,
+              dateRange: filters.dateRange
+                ? {
+                    start: filters.dateRange.start ? new Date(filters.dateRange.start) : undefined,
+                    end: filters.dateRange.end ? new Date(filters.dateRange.end) : undefined,
+                  }
+                : undefined,
+            }
+          : undefined
+
         searchResults = await semanticSearch(
-          { query, limit, mode, filters },
+          { query, limit, mode, filters: searchFilters },
           notesWithEmbeddings,
           async () => queryEmbedding
         )

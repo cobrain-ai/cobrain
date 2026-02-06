@@ -80,24 +80,29 @@ jobs:
       - name: Fix Kotlin version compatibility
         working-directory: apps/mobile/android
         run: |
-          # Ensure Kotlin version is set to 1.9.24 (which maps to Compose Compiler 1.5.14)
-          # The expo-modules-core versionsMap expects exact version match
+          # Fix Compose Compiler version for Kotlin 1.9.24 compatibility
+          # The expo-modules-core versionsMap lookup fails because kotlinVersion() returns unexpected format
+
+          # Add properties to gradle.properties
           cat >> gradle.properties << 'EOF'
 
           # Fix Kotlin/Compose version compatibility
           kotlin.jvm.target.validation.mode=IGNORE
-
-          # Force Kotlin version to 1.9.24 for Compose Compiler 1.5.14 compatibility
-          kotlinVersion=1.9.24
+          android.suppressKotlinVersionCompatibilityCheck=true
           EOF
 
-          # Also set it in the ext block of build.gradle to ensure it's picked up
-          sed -i 's/ext {/ext {\n        kotlinVersion = "1.9.24"/' build.gradle || true
-
-          # Alternative: directly patch expo-modules-core to add suppressKotlinVersionCompatibilityCheck
-          # This flag is passed to the compose compiler to skip version validation
-          find ../node_modules -path "*expo-modules-core/android/build.gradle" -exec sed -i \
-            's/kotlinCompilerExtensionVersion = versionsMap\[kotlinVersion()\]/kotlinCompilerExtensionVersion = "1.5.14"/' {} \; 2>/dev/null || true
+          # Directly patch expo-modules-core to use hardcoded compose compiler version
+          # This bypasses the versionsMap lookup that's failing
+          EXPO_CORE_GRADLE=$(find ../node_modules -path "*expo-modules-core*/android/build.gradle" -type f | head -1)
+          if [ -n "$EXPO_CORE_GRADLE" ]; then
+            echo "Found expo-modules-core at: $EXPO_CORE_GRADLE"
+            # Replace the dynamic version lookup with hardcoded 1.5.14
+            sed -i 's/kotlinCompilerExtensionVersion = versionsMap\[kotlinVersion()\]/kotlinCompilerExtensionVersion = "1.5.14"/' "$EXPO_CORE_GRADLE"
+            # Verify the change
+            grep -A2 "composeOptions" "$EXPO_CORE_GRADLE" || true
+          else
+            echo "WARNING: expo-modules-core build.gradle not found"
+          fi
 
       - name: Build Android APK (Debug)
         working-directory: apps/mobile/android

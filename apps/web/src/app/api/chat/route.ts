@@ -172,7 +172,7 @@ async function fetchRelevantNotes(userId: string, query: string): Promise<Note[]
       if (similarNotes.length > 0) {
         const noteIds = similarNotes.map((n) => n.noteId)
         const dbNotes = await notesRepository.findByIds(noteIds)
-        return dbNotes.map(toNote)
+        return dbNotes.map((n) => toNote(n as unknown as DatabaseNote))
       }
     }
 
@@ -181,7 +181,7 @@ async function fetchRelevantNotes(userId: string, query: string): Promise<Note[]
       userId,
       limit: 20,
     })
-    return dbNotes.map(toNote)
+    return dbNotes.map((n) => toNote(n as unknown as DatabaseNote))
   } catch (error) {
     console.error('Error fetching notes for context:', error)
     return []

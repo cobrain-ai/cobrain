@@ -70,7 +70,8 @@ export async function GET() {
     }
 
     // Format response with note preview
-    const reminders = dueReminders.map((r) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const reminders = dueReminders.map((r: any) => ({
       id: r.id,
       message: r.message,
       triggerAt: r.triggerAt.toISOString(),

@@ -16,6 +16,7 @@ export async function initializePlugins(userId: string): Promise<void> {
   // Register official plugins dynamically
   // This allows for lazy loading and code splitting
   try {
+    // @ts-expect-error - @cobrain/plugins may not be built yet
     const pluginsModule = await import('@cobrain/plugins')
 
     // Register all official plugins

@@ -180,7 +180,7 @@ export function GraphView({ className = '' }: GraphViewProps) {
       })
 
       // Add neighbors and edges from neighborhoods
-      const validNeighborhoods = neighborhoods.filter(Boolean)
+      const validNeighborhoods = neighborhoods.filter((n): n is GraphNeighborhood => Boolean(n))
       const neighborhoodCount = validNeighborhoods.length
 
       validNeighborhoods.forEach((neighborhood, hubIndex) => {
@@ -409,8 +409,10 @@ export function GraphView({ className = '' }: GraphViewProps) {
         onNodesChange={onNodesChange as OnNodesChange<Node<EntityNodeData>>}
         onEdgesChange={onEdgesChange as OnEdgesChange<Edge<RelationEdgeData>>}
         onNodeClick={handleNodeClick}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        nodeTypes={nodeTypes as any}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        edgeTypes={edgeTypes as any}
         fitView
         fitViewOptions={{ padding: VIEW_OPTIONS.FIT_PADDING }}
         minZoom={VIEW_OPTIONS.MIN_ZOOM}

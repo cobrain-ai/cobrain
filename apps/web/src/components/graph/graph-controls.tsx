@@ -97,8 +97,8 @@ export function GraphControls({
                 style={{
                   backgroundColor: `${color}20`,
                   color: color,
-                  ringColor: color,
-                }}
+                  '--tw-ring-color': color,
+                } as React.CSSProperties}
                 title={`${type}: ${count} entities`}
               >
                 <span>{icon}</span>
