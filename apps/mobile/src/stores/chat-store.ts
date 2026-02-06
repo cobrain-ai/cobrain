@@ -1,4 +1,8 @@
 import { create } from 'zustand'
+import { LocalLLMProvider } from '@cobrain/core/src/providers/local-llm'
+import { getLocalLLMBridge } from '@/providers/local-llm-bridge'
+import { useSettingsStore } from './settings-store'
+import { useLocalLLMStore } from './local-llm-store'
 
 export interface ChatMessage {
   id: string
@@ -35,14 +39,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }))
 
     try {
-      // TODO: Replace with actual AI provider call
-      // For now, simulate a response
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const { aiProvider } = useSettingsStore.getState()
+      let responseContent: string
+
+      if (aiProvider === 'local-llm') {
+        responseContent = await getLocalLLMResponse(content)
+      } else {
+        // Fallback to simulated responses for other providers
+        // TODO: Integrate Ollama, OpenAI, Anthropic providers
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+        responseContent = getSimulatedResponse(content)
+      }
 
       const assistantMessage: ChatMessage = {
         id: `msg_${Date.now()}_assistant`,
         role: 'assistant',
-        content: getSimulatedResponse(content),
+        content: responseContent,
         timestamp: new Date().toISOString(),
       }
 
@@ -53,7 +65,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     } catch (error) {
       console.error('Failed to get AI response:', error)
       set({
-        error: 'Failed to get response',
+        error: error instanceof Error ? error.message : 'Failed to get response',
         isLoading: false,
       })
     }
@@ -63,6 +75,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ messages: [], error: null })
   },
 }))
+
+async function getLocalLLMResponse(content: string): Promise<string> {
+  const { activeModelId } = useLocalLLMStore.getState()
+  if (!activeModelId) {
+    throw new Error('No local model selected. Go to Settings > AI Settings > Manage Models.')
+  }
+
+  const provider = new LocalLLMProvider()
+  const bridge = getLocalLLMBridge()
+  provider.setBridge(bridge)
+  provider.setActiveModel(activeModelId)
+  await provider.initialize()
+
+  const response = await provider.complete([
+    { role: 'system', content: 'You are CoBrain, a helpful AI thinking partner. Keep responses concise and helpful.' },
+    { role: 'user', content },
+  ])
+
+  return response.content
+}
 
 // Simulated responses for demo purposes
 function getSimulatedResponse(query: string): string {

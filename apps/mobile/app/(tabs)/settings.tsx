@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
+import { useRouter } from 'expo-router'
 import { useSettingsStore } from '@/stores/settings-store'
 
 type SettingItemProps = {
@@ -110,11 +111,13 @@ export default function SettingsScreen() {
   const colorScheme = useColorScheme()
   const isDark = colorScheme === 'dark'
 
+  const router = useRouter()
   const {
     notificationsEnabled,
     setNotificationsEnabled,
     syncEnabled,
     setSyncEnabled,
+    aiProvider,
   } = useSettingsStore()
 
   const bgColor = isDark ? 'bg-background-dark' : 'bg-surface'
@@ -165,9 +168,15 @@ export default function SettingsScreen() {
           <SettingItem
             icon="hardware-chip-outline"
             title="AI Settings"
-            subtitle="Configure your AI provider"
+            subtitle={
+              aiProvider === 'local-llm'
+                ? 'On-Device AI'
+                : aiProvider
+                  ? aiProvider.charAt(0).toUpperCase() + aiProvider.slice(1)
+                  : 'Configure your AI provider'
+            }
             onPress={() => {
-              // TODO: Navigate to AI settings
+              router.push('/ai-settings')
             }}
           />
         </SettingSection>

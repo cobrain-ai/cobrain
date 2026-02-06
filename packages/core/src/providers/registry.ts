@@ -3,6 +3,7 @@ import { OllamaProvider } from './ollama.js'
 import { ClaudeCliProvider } from './claude-cli.js'
 import { OpenAIProvider } from './openai.js'
 import { AnthropicProvider } from './anthropic.js'
+import { LocalLLMProvider } from './local-llm.js'
 
 type ProviderConstructor = new (config?: LLMProviderConfig) => LLMProvider
 
@@ -17,6 +18,7 @@ export class ProviderRegistry {
     this.constructors.set('claude-cli', ClaudeCliProvider as unknown as ProviderConstructor)
     this.constructors.set('openai', OpenAIProvider as unknown as ProviderConstructor)
     this.constructors.set('anthropic', AnthropicProvider as unknown as ProviderConstructor)
+    this.constructors.set('local-llm', LocalLLMProvider as unknown as ProviderConstructor)
   }
 
   /**

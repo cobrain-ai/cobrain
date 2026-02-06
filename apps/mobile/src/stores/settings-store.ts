@@ -4,12 +4,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 interface SettingsState {
   notificationsEnabled: boolean
   syncEnabled: boolean
-  aiProvider: 'ollama' | 'openai' | 'anthropic' | null
+  aiProvider: 'ollama' | 'openai' | 'anthropic' | 'local-llm' | null
   isLoading: boolean
   loadSettings: () => Promise<void>
   setNotificationsEnabled: (enabled: boolean) => Promise<void>
   setSyncEnabled: (enabled: boolean) => Promise<void>
-  setAiProvider: (provider: 'ollama' | 'openai' | 'anthropic' | null) => Promise<void>
+  setAiProvider: (provider: 'ollama' | 'openai' | 'anthropic' | 'local-llm' | null) => Promise<void>
 }
 
 const SETTINGS_STORAGE_KEY = '@cobrain_settings'

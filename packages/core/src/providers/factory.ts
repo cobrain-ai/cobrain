@@ -5,11 +5,13 @@ import type {
   ClaudeCliConfig,
   OpenAIConfig,
   AnthropicConfig,
+  LocalLLMConfig,
 } from '../types/index.js'
 import { OllamaProvider } from './ollama.js'
 import { ClaudeCliProvider } from './claude-cli.js'
 import { OpenAIProvider } from './openai.js'
 import { AnthropicProvider } from './anthropic.js'
+import { LocalLLMProvider } from './local-llm.js'
 
 export class ProviderFactory {
   /**
@@ -25,6 +27,8 @@ export class ProviderFactory {
         return new OpenAIProvider(config as OpenAIConfig)
       case 'anthropic':
         return new AnthropicProvider(config as AnthropicConfig)
+      case 'local-llm':
+        return new LocalLLMProvider(config as LocalLLMConfig)
       default:
         throw new Error(`Unknown provider type: ${(config as ProviderConfig).type}`)
     }
@@ -86,6 +90,17 @@ export class ProviderFactory {
       enabled: true,
       apiKey,
       model: 'claude-sonnet-4-20250514',
+      ...config,
+    })
+  }
+
+  /**
+   * Create Local LLM provider for on-device inference
+   */
+  static localLLM(config: Partial<LocalLLMConfig> = {}): LocalLLMProvider {
+    return new LocalLLMProvider({
+      type: 'local-llm',
+      enabled: true,
       ...config,
     })
   }

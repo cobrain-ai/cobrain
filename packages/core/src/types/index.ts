@@ -1,7 +1,7 @@
 // LLM Provider Types
 
 // Provider type identifiers
-export type ProviderType = 'ollama' | 'claude-cli' | 'openai' | 'anthropic'
+export type ProviderType = 'ollama' | 'claude-cli' | 'openai' | 'anthropic' | 'local-llm'
 
 // Message types
 export type MessageRole = 'system' | 'user' | 'assistant'
@@ -146,7 +146,13 @@ export interface AnthropicConfig extends LLMProviderConfig {
   defaultModel?: string
 }
 
-export type ProviderConfig = OllamaConfig | ClaudeCliConfig | OpenAIConfig | AnthropicConfig
+export interface LocalLLMConfig extends LLMProviderConfig {
+  type: 'local-llm'
+  platform?: 'ios' | 'android' | 'auto'
+  defaultModel?: string
+}
+
+export type ProviderConfig = OllamaConfig | ClaudeCliConfig | OpenAIConfig | AnthropicConfig | LocalLLMConfig
 
 // Error types
 export type LLMErrorCode =
@@ -265,4 +271,42 @@ export interface Reminder {
   message: string
   isCompleted: boolean
   createdAt: Date
+}
+
+// Local LLM Model Types
+export type ModelDownloadStatus = 'idle' | 'downloading' | 'paused' | 'completed' | 'error'
+
+export interface LocalModel {
+  id: string
+  name: string
+  description: string
+  parameters: string
+  sizeBytes: number
+  downloadUrl: string
+  platform: 'ios' | 'android' | 'both'
+  quality: 'basic' | 'good' | 'better'
+  speed: 'very-fast' | 'fast' | 'medium'
+}
+
+export interface DownloadedModel extends LocalModel {
+  localPath: string
+  downloadedAt: Date
+}
+
+export interface ModelDownloadProgress {
+  modelId: string
+  status: ModelDownloadStatus
+  bytesDownloaded: number
+  totalBytes: number
+  speedBps: number
+}
+
+export interface LocalLLMBridge {
+  isAvailable(): Promise<boolean>
+  listDownloadedModels(): Promise<DownloadedModel[]>
+  downloadModel(model: LocalModel, onProgress: (progress: ModelDownloadProgress) => void): Promise<DownloadedModel>
+  deleteModel(modelId: string): Promise<void>
+  cancelDownload(modelId: string): Promise<void>
+  generate(modelId: string, prompt: string, options?: { temperature?: number; maxTokens?: number; signal?: AbortSignal }): Promise<string>
+  generateStream(modelId: string, prompt: string, options?: { temperature?: number; maxTokens?: number; signal?: AbortSignal }): AsyncIterable<string>
 }
