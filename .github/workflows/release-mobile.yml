@@ -77,21 +77,46 @@ jobs:
         working-directory: apps/mobile
         run: |
           # pnpm's symlink structure breaks Gradle plugin resolution for Expo native modules
-          # Solution: replace workspace:* with file: refs and install fresh with npm
+          # Solution: replace workspace:* with file: refs in ALL packages and install fresh with npm
+
+          # Patch apps/mobile/package.json
           python3 -c "
-          import json
-          with open('package.json') as f:
-              pkg = json.load(f)
-          deps = pkg.get('dependencies', {})
-          for key in list(deps.keys()):
-              if deps[key] == 'workspace:*':
-                  if 'core' in key:
-                      deps[key] = 'file:../../packages/core'
-                  elif 'database' in key:
-                      deps[key] = 'file:../../packages/database'
-          with open('package.json', 'w') as f:
-              json.dump(pkg, f, indent=2)
+          import json, glob, os
+
+          # Mapping of workspace package names to their file: paths (relative to apps/mobile)
+          workspace_map = {
+              '@cobrain/core': 'file:../../packages/core',
+              '@cobrain/database': 'file:../../packages/database',
+          }
+
+          def patch_pkg(filepath, workspace_map_rel):
+              with open(filepath) as f:
+                  pkg = json.load(f)
+              changed = False
+              for section in ['dependencies', 'devDependencies', 'peerDependencies']:
+                  deps = pkg.get(section, {})
+                  for key in list(deps.keys()):
+                      if deps[key] == 'workspace:*' and key in workspace_map_rel:
+                          deps[key] = workspace_map_rel[key]
+                          changed = True
+              if changed:
+                  with open(filepath, 'w') as f:
+                      json.dump(pkg, f, indent=2)
+                  print(f'Patched {filepath}')
+              else:
+                  print(f'No workspace:* found in {filepath}')
+
+          # Patch mobile package.json
+          patch_pkg('package.json', workspace_map)
+
+          # Patch packages/database/package.json (it depends on @cobrain/core)
+          db_map = {'@cobrain/core': 'file:../core'}
+          patch_pkg('../../packages/database/package.json', db_map)
           "
+          echo "=== Patched package.json files ==="
+          grep -n 'cobrain' package.json || true
+          grep -n 'cobrain' ../../packages/database/package.json || true
+
           rm -rf node_modules
           npm install --legacy-peer-deps
           echo "=== Verifying key native modules ==="
