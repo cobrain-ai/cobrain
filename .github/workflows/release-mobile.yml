@@ -152,33 +152,32 @@ jobs:
           echo "" >> gradle.properties
           echo "kotlin.jvm.target.validation.mode=IGNORE" >> gradle.properties
 
-          # With shamefully-hoist=true, expo-modules-core is in root node_modules
           echo "Searching for expo-modules-core build.gradle..."
 
-          # Try root node_modules first (shamefully-hoist structure)
-          ROOT_PATH="../../../node_modules/expo-modules-core/android/build.gradle"
-          # Then try local node_modules
+          # Local node_modules (npm flat install) takes priority - this is what Gradle uses
           LOCAL_PATH="../node_modules/expo-modules-core/android/build.gradle"
+          ROOT_PATH="../../../node_modules/expo-modules-core/android/build.gradle"
 
+          patch_file() {
+            echo "Patching: $1"
+            sed -i 's/kotlinCompilerExtensionVersion = versionsMap\[kotlinVersion()\]/kotlinCompilerExtensionVersion = "1.5.14"/' "$1"
+            grep -n "kotlinCompilerExtensionVersion" "$1" || true
+          }
+
+          # Patch local node_modules (used by Gradle)
+          if [ -f "$LOCAL_PATH" ]; then
+            patch_file "$LOCAL_PATH"
+          fi
+          # Also patch root if it exists (belt and suspenders)
           if [ -f "$ROOT_PATH" ]; then
-            echo "Found expo-modules-core at root: $ROOT_PATH"
-            sed -i 's/kotlinCompilerExtensionVersion = versionsMap\[kotlinVersion()\]/kotlinCompilerExtensionVersion = "1.5.14"/' "$ROOT_PATH"
-            grep -n "kotlinCompilerExtensionVersion" "$ROOT_PATH" || true
-          elif [ -f "$LOCAL_PATH" ]; then
-            echo "Found expo-modules-core at local: $LOCAL_PATH"
-            sed -i 's/kotlinCompilerExtensionVersion = versionsMap\[kotlinVersion()\]/kotlinCompilerExtensionVersion = "1.5.14"/' "$LOCAL_PATH"
-            grep -n "kotlinCompilerExtensionVersion" "$LOCAL_PATH" || true
-          else
+            patch_file "$ROOT_PATH"
+          fi
+          # Fallback search if neither found
+          if [ ! -f "$LOCAL_PATH" ] && [ ! -f "$ROOT_PATH" ]; then
             echo "Searching with find..."
-            EXPO_CORE_GRADLE=$(find -L ../../.. -path "*/expo-modules-core/android/build.gradle" -type f 2>/dev/null | head -1)
-            if [ -n "$EXPO_CORE_GRADLE" ]; then
-              echo "Found expo-modules-core at: $EXPO_CORE_GRADLE"
-              sed -i 's/kotlinCompilerExtensionVersion = versionsMap\[kotlinVersion()\]/kotlinCompilerExtensionVersion = "1.5.14"/' "$EXPO_CORE_GRADLE"
-            else
-              echo "WARNING: expo-modules-core build.gradle not found"
-              echo "Listing root node_modules..."
-              ls -la ../../../node_modules/ | head -20 || true
-            fi
+            find -L ../.. -path "*/expo-modules-core/android/build.gradle" -type f 2>/dev/null | while read f; do
+              patch_file "$f"
+            done
           fi
 
       - name: Build Android APK (Debug)
