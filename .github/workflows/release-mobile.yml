@@ -80,26 +80,40 @@ jobs:
       - name: Fix Kotlin version compatibility
         working-directory: apps/mobile/android
         run: |
-          # Fix Compose Compiler version for Kotlin 1.9.24 compatibility
-          # The expo-modules-core versionsMap lookup fails because kotlinVersion() returns unexpected format
+          # Fix Compose Compiler / Kotlin version mismatch
+          # expo-modules-core uses a versionsMap that maps kotlinVersion() to compose compiler version
+          # If the Kotlin version doesn't match exactly, Compose Compiler throws a compatibility error
 
           # Add properties to gradle.properties
           cat >> gradle.properties << 'EOF'
 
           # Fix Kotlin/Compose version compatibility
           kotlin.jvm.target.validation.mode=IGNORE
-          android.suppressKotlinVersionCompatibilityCheck=true
           EOF
 
-          # Directly patch expo-modules-core to use hardcoded compose compiler version
-          # This bypasses the versionsMap lookup that's failing
+          # Patch expo-modules-core to hardcode compose compiler version matching Kotlin 1.9.24
           EXPO_CORE_GRADLE=$(find ../node_modules -path "*expo-modules-core*/android/build.gradle" -type f | head -1)
           if [ -n "$EXPO_CORE_GRADLE" ]; then
             echo "Found expo-modules-core at: $EXPO_CORE_GRADLE"
-            # Replace the dynamic version lookup with hardcoded 1.5.14
-            sed -i 's/kotlinCompilerExtensionVersion = versionsMap\[kotlinVersion()\]/kotlinCompilerExtensionVersion = "1.5.14"/' "$EXPO_CORE_GRADLE"
-            # Verify the change
-            grep -A2 "composeOptions" "$EXPO_CORE_GRADLE" || true
+            echo "=== Before patch ==="
+            grep -n "kotlinCompilerExtensionVersion\|composeOptions\|versionsMap" "$EXPO_CORE_GRADLE" || true
+            # Replace the entire composeOptions block with a hardcoded version
+            # Use python for reliable multiline replacement
+            python3 -c "
+          import re
+          with open('$EXPO_CORE_GRADLE', 'r') as f:
+              content = f.read()
+          # Replace versionsMap lookup with hardcoded version for Kotlin 1.9.24
+          content = re.sub(
+              r'kotlinCompilerExtensionVersion\s*=\s*versionsMap\[kotlinVersion\(\)\]',
+              'kotlinCompilerExtensionVersion = \"1.5.14\"',
+              content
+          )
+          with open('$EXPO_CORE_GRADLE', 'w') as f:
+              f.write(content)
+          "
+            echo "=== After patch ==="
+            grep -n "kotlinCompilerExtensionVersion\|composeOptions\|versionsMap" "$EXPO_CORE_GRADLE" || true
           else
             echo "WARNING: expo-modules-core build.gradle not found"
           fi
