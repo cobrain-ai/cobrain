@@ -73,9 +73,21 @@ jobs:
       - name: Setup Expo
         run: npm install -g eas-cli
 
+      - name: Reinstall mobile deps with npm for native compatibility
+        working-directory: apps/mobile
+        run: |
+          # pnpm symlink structure breaks CMake native module resolution
+          # Reinstall with npm to get a flat node_modules for native builds
+          rm -rf node_modules
+          npm install --legacy-peer-deps
+          # Symlink workspace packages into npm's node_modules
+          rm -rf node_modules/@cobrain/core node_modules/@cobrain/database
+          ln -s ../../packages/core node_modules/@cobrain/core
+          ln -s ../../packages/database node_modules/@cobrain/database
+
       - name: Generate native project
         working-directory: apps/mobile
-        run: npx expo prebuild --platform android --clean --npm
+        run: npx expo prebuild --platform android --clean
 
       - name: Fix Kotlin version compatibility
         working-directory: apps/mobile/android
