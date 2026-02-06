@@ -23,6 +23,15 @@ fn main() {
             // Register global shortcut (Ctrl+Shift+Space)
             setup_global_shortcut(app)?;
 
+            // Show main window on startup (except on macOS where we hide to tray)
+            #[cfg(not(target_os = "macos"))]
+            {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+
             // Hide dock icon on macOS when running in background
             #[cfg(target_os = "macos")]
             {
