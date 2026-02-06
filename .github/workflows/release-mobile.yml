@@ -73,9 +73,34 @@ jobs:
       - name: Setup Expo
         run: npm install -g eas-cli
 
+      - name: Setup flat node_modules for native build
+        working-directory: apps/mobile
+        run: |
+          # pnpm's symlink structure breaks Gradle plugin resolution for Expo native modules
+          # Solution: replace workspace:* with file: refs and install fresh with npm
+          python3 -c "
+          import json
+          with open('package.json') as f:
+              pkg = json.load(f)
+          deps = pkg.get('dependencies', {})
+          for key in list(deps.keys()):
+              if deps[key] == 'workspace:*':
+                  if 'core' in key:
+                      deps[key] = 'file:../../packages/core'
+                  elif 'database' in key:
+                      deps[key] = 'file:../../packages/database'
+          with open('package.json', 'w') as f:
+              json.dump(pkg, f, indent=2)
+          "
+          rm -rf node_modules
+          npm install --legacy-peer-deps
+          echo "=== Verifying key native modules ==="
+          ls node_modules/expo-modules-core/android/build.gradle && echo "expo-modules-core: OK" || echo "expo-modules-core: MISSING"
+          ls node_modules/expo-font/android/build.gradle && echo "expo-font: OK" || echo "expo-font: MISSING"
+
       - name: Generate native project
         working-directory: apps/mobile
-        run: npx expo prebuild --platform android --clean --no-install
+        run: npx expo prebuild --platform android --clean
 
       - name: Fix Kotlin version compatibility
         working-directory: apps/mobile/android
