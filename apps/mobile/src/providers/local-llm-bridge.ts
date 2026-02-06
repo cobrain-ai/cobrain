@@ -5,6 +5,11 @@ import type {
   DownloadedModel,
   ModelDownloadProgress,
 } from '@cobrain/core/src/types'
+import {
+  downloadModel as downloadModelFile,
+  cancelDownload as cancelModelDownload,
+  deleteModelFile,
+} from './model-download-service'
 
 /**
  * Platform-dispatching bridge for local LLM inference.
@@ -103,51 +108,31 @@ class AppleFoundationBridge implements LocalLLMBridge {
 // ─── MediaPipe LLM Bridge (Android) ────────────────────────────────
 
 class MediaPipeLLMBridge implements LocalLLMBridge {
-  private downloadedModels: Map<string, DownloadedModel> = new Map()
-
   async isAvailable(): Promise<boolean> {
-    try {
-      // TODO: Replace with actual native module call:
-      // const { MediaPipeLLM } = require('expo-llm-mediapipe')
-      // return await MediaPipeLLM.isAvailable()
-      return false
-    } catch {
-      return false
-    }
+    // MediaPipe bridge is available on Android when model files are downloaded.
+    // Actual inference requires the native module, but download/management works now.
+    return Platform.OS === 'android'
   }
 
   async listDownloadedModels(): Promise<DownloadedModel[]> {
-    return Array.from(this.downloadedModels.values())
+    // The Zustand store (local-llm-store) is the source of truth for downloaded models.
+    // This method is kept for bridge interface compatibility.
+    return []
   }
 
   async downloadModel(
     model: LocalModel,
     onProgress: (progress: ModelDownloadProgress) => void
   ): Promise<DownloadedModel> {
-    // TODO: Replace with actual native module download:
-    // const { MediaPipeLLM } = require('expo-llm-mediapipe')
-    // return await MediaPipeLLM.downloadModel(model.downloadUrl, {
-    //   onProgress: (downloaded, total) => {
-    //     onProgress({ modelId: model.id, status: 'downloading', bytesDownloaded: downloaded, totalBytes: total, speedBps: 0 })
-    //   }
-    // })
-    throw new Error(
-      'MediaPipe LLM native module not installed. ' +
-      'Install expo-llm-mediapipe for Android support.'
-    )
+    return await downloadModelFile(model, onProgress)
   }
 
   async deleteModel(modelId: string): Promise<void> {
-    // TODO: Replace with actual native module call:
-    // const { MediaPipeLLM } = require('expo-llm-mediapipe')
-    // await MediaPipeLLM.deleteModel(modelId)
-    this.downloadedModels.delete(modelId)
+    await deleteModelFile(modelId)
   }
 
-  async cancelDownload(modelId: string): Promise<void> {
-    // TODO: Replace with actual native module call:
-    // const { MediaPipeLLM } = require('expo-llm-mediapipe')
-    // await MediaPipeLLM.cancelDownload(modelId)
+  async cancelDownload(_modelId: string): Promise<void> {
+    await cancelModelDownload()
   }
 
   async generate(

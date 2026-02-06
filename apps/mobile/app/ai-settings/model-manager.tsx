@@ -14,6 +14,11 @@ import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { useLocalLLMStore } from '@/stores/local-llm-store'
 import { getAvailableModels, formatModelSize } from '@/providers/model-catalog'
+import {
+  downloadModel as downloadModelFile,
+  cancelDownload,
+  deleteModelFile,
+} from '@/providers/model-download-service'
 import type { LocalModel, DownloadedModel } from '@cobrain/core/src/types'
 
 function ModelCard({
@@ -126,8 +131,9 @@ function DownloadProgressBar() {
           Downloading...
         </Text>
         <TouchableOpacity
-          onPress={() => {
+          onPress={async () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+            await cancelDownload()
             setDownloadProgress(null)
           }}
         >
@@ -162,7 +168,9 @@ export default function ModelManagerScreen() {
     activeModelId,
     loadState,
     setActiveModel,
+    addDownloadedModel,
     removeDownloadedModel,
+    setDownloadProgress,
   } = useLocalLLMStore()
 
   useEffect(() => {
@@ -207,7 +215,14 @@ export default function ModelManagerScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => removeDownloadedModel(modelId),
+          onPress: async () => {
+            try {
+              await deleteModelFile(modelId)
+              removeDownloadedModel(modelId)
+            } catch {
+              Alert.alert('Error', 'Failed to delete model file.')
+            }
+          },
         },
       ]
     )
@@ -221,16 +236,24 @@ export default function ModelManagerScreen() {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Download',
-          onPress: () => {
-            // TODO: Connect to actual bridge download when native modules are installed
-            Alert.alert(
-              'Native Module Required',
-              `To download models, install the native module:\n\n` +
-              (Platform.OS === 'ios'
-                ? 'npm install react-native-apple-llm'
-                : 'npm install expo-llm-mediapipe') +
-              '\n\nThen rebuild with expo prebuild.',
-            )
+          onPress: async () => {
+            try {
+              const downloaded = await downloadModelFile(model, (progress) => {
+                setDownloadProgress(progress)
+              })
+              addDownloadedModel(downloaded)
+              setDownloadProgress(null)
+              Alert.alert('Download Complete', `"${model.name}" is ready to use.`)
+            } catch (error) {
+              setDownloadProgress(null)
+              if (error instanceof Error && error.message.includes('cancelled')) {
+                return
+              }
+              Alert.alert(
+                'Download Failed',
+                error instanceof Error ? error.message : 'An unknown error occurred.',
+              )
+            }
           },
         },
       ]
