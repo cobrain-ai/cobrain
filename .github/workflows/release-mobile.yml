@@ -131,6 +131,8 @@ jobs:
 
           rm -rf node_modules
           npm install --legacy-peer-deps
+          # Fix ajv version mismatch: ajv-keywords@5 needs ajv@8 but npm may dedupe to ajv@6
+          npm install ajv@8 --legacy-peer-deps
           echo "=== Verifying key native modules ==="
           ls node_modules/expo-modules-core/android/build.gradle && echo "expo-modules-core: OK" || echo "expo-modules-core: MISSING"
           ls node_modules/expo-font/android/build.gradle && echo "expo-font: OK" || echo "expo-font: MISSING"
