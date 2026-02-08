@@ -225,17 +225,31 @@ jobs:
           # To sign, add ANDROID_KEYSTORE_* secrets
           ANDROID_KEYSTORE_FILE: ''
 
+      - name: Find built APKs
+        id: find-apks
+        run: |
+          echo "=== All APK files ==="
+          find apps/mobile/android -name "*.apk" -type f 2>/dev/null || echo "No APKs found"
+          DEBUG_APK=$(find apps/mobile/android -name "*debug*.apk" -type f 2>/dev/null | head -1)
+          RELEASE_APK=$(find apps/mobile/android -name "*release*.apk" -type f 2>/dev/null | head -1)
+          echo "debug_apk=$DEBUG_APK" >> $GITHUB_OUTPUT
+          echo "release_apk=$RELEASE_APK" >> $GITHUB_OUTPUT
+          echo "Debug APK: $DEBUG_APK"
+          echo "Release APK: $RELEASE_APK"
+
       - name: Sign APK (if keystore available)
-        if: env.ANDROID_KEYSTORE_BASE64 != ''
+        if: env.ANDROID_KEYSTORE_BASE64 != '' && steps.find-apks.outputs.release_apk != ''
         working-directory: apps/mobile
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
-          $ANDROID_HOME/build-tools/34.0.0/apksigner sign \
+          APKSIGNER=$(find $ANDROID_HOME/build-tools -name "apksigner" -type f 2>/dev/null | sort -V | tail -1)
+          echo "Using apksigner: $APKSIGNER"
+          $APKSIGNER sign \
             --ks keystore.jks \
             --ks-key-alias ${{ secrets.ANDROID_KEY_ALIAS }} \
             --ks-pass pass:${{ secrets.ANDROID_KEYSTORE_PASSWORD }} \
             --key-pass pass:${{ secrets.ANDROID_KEY_PASSWORD }} \
-            android/app/build/outputs/apk/release/app-release-unsigned.apk
+            ../../${{ steps.find-apks.outputs.release_apk }}
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
 
@@ -243,19 +257,18 @@ jobs:
         run: |
           VERSION="${{ github.event.inputs.version || github.ref_name }}"
           VERSION="${VERSION#v}"  # Remove 'v' prefix if present
-
           mkdir -p release
 
           # Copy debug APK
-          if [ -f apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk ]; then
-            cp apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk \
-               release/CoBrain-${VERSION}-debug.apk
+          DEBUG_APK="${{ steps.find-apks.outputs.debug_apk }}"
+          if [ -n "$DEBUG_APK" ] && [ -f "$DEBUG_APK" ]; then
+            cp "$DEBUG_APK" "release/CoBrain-${VERSION}-debug.apk"
           fi
 
           # Copy release APK
-          if [ -f apps/mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk ]; then
-            cp apps/mobile/android/app/build/outputs/apk/release/app-release-unsigned.apk \
-               release/CoBrain-${VERSION}-android.apk
+          RELEASE_APK="${{ steps.find-apks.outputs.release_apk }}"
+          if [ -n "$RELEASE_APK" ] && [ -f "$RELEASE_APK" ]; then
+            cp "$RELEASE_APK" "release/CoBrain-${VERSION}-android.apk"
           fi
 
       - name: Upload Android artifacts
