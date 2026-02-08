@@ -133,9 +133,12 @@ jobs:
           npm install --legacy-peer-deps
           # Fix ajv version mismatch: ajv-keywords@5 needs ajv@8 but npm may dedupe to ajv@6
           npm install ajv@8 --legacy-peer-deps
-          # NativeWind babel preset requires react-native-worklets/plugin
-          # Pin to ~0.4.0 for React Native 0.76 compatibility (0.7.x needs RN 0.81+)
-          npm install react-native-worklets@~0.4.0 --legacy-peer-deps
+          # NativeWind/react-native-css-interop tries to load react-native-worklets/plugin
+          # but the real package requires New Architecture + RN 0.76+. Create a no-op stub.
+          mkdir -p node_modules/react-native-worklets
+          echo '{"name":"react-native-worklets","version":"0.0.0","main":"index.js"}' > node_modules/react-native-worklets/package.json
+          echo 'module.exports = {};' > node_modules/react-native-worklets/index.js
+          echo 'module.exports = function() { return { visitor: {} }; };' > node_modules/react-native-worklets/plugin.js
           echo "=== Verifying key native modules ==="
           ls node_modules/expo-modules-core/android/build.gradle && echo "expo-modules-core: OK" || echo "expo-modules-core: MISSING"
           ls node_modules/expo-font/android/build.gradle && echo "expo-font: OK" || echo "expo-font: MISSING"
