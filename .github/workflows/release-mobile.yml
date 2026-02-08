@@ -139,6 +139,24 @@ jobs:
           echo '{"name":"react-native-worklets","version":"0.0.0","main":"index.js"}' > node_modules/react-native-worklets/package.json
           echo 'module.exports = {};' > node_modules/react-native-worklets/index.js
           echo 'module.exports = function() { return { visitor: {} }; };' > node_modules/react-native-worklets/plugin.js
+          # Replace @cobrain symlinks with dist-only copies so Metro uses compiled output
+          # (Metro's watchFolders watches monorepo root and resolves .ts source files directly,
+          #  but TypeScript ESM imports use .js extensions which Metro can't resolve to .ts)
+          for pkg in core database; do
+            PKG_DIR="node_modules/@cobrain/$pkg"
+            if [ -L "$PKG_DIR" ] || [ -d "$PKG_DIR" ]; then
+              SRC_DIR="../../packages/$pkg"
+              rm -rf "$PKG_DIR"
+              mkdir -p "$PKG_DIR"
+              cp "$SRC_DIR/package.json" "$PKG_DIR/"
+              if [ -d "$SRC_DIR/dist" ]; then
+                cp -r "$SRC_DIR/dist" "$PKG_DIR/"
+                echo "@cobrain/$pkg: copied dist/ ($(ls "$PKG_DIR/dist/" | wc -l) files)"
+              else
+                echo "WARNING: @cobrain/$pkg dist/ not found - build may have failed"
+              fi
+            fi
+          done
           echo "=== Verifying key native modules ==="
           ls node_modules/expo-modules-core/android/build.gradle && echo "expo-modules-core: OK" || echo "expo-modules-core: MISSING"
           ls node_modules/expo-font/android/build.gradle && echo "expo-font: OK" || echo "expo-font: MISSING"
