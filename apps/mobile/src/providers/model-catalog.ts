@@ -1,4 +1,4 @@
-import type { LocalModel } from '@cobrain/core/src/types'
+import type { LocalModel } from '@cobrain/core'
 import { Platform } from 'react-native'
 
 /**

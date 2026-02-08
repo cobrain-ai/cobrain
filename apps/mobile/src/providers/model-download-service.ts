@@ -3,7 +3,7 @@ import type {
   LocalModel,
   DownloadedModel,
   ModelDownloadProgress,
-} from '@cobrain/core/src/types'
+} from '@cobrain/core'
 
 const MODELS_DIR = `${FileSystem.documentDirectory}models/`
 

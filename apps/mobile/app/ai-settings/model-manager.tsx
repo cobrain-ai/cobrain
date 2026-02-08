@@ -19,7 +19,7 @@ import {
   cancelDownload,
   deleteModelFile,
 } from '@/providers/model-download-service'
-import type { LocalModel, DownloadedModel } from '@cobrain/core/src/types'
+import type { LocalModel, DownloadedModel } from '@cobrain/core'
 
 function ModelCard({
   model,

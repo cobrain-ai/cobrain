@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { LocalLLMProvider } from '@cobrain/core/src/providers/local-llm'
+import { LocalLLMProvider } from '@cobrain/core'
 import { getLocalLLMBridge } from '@/providers/local-llm-bridge'
 import { useSettingsStore } from './settings-store'
 import { useLocalLLMStore } from './local-llm-store'

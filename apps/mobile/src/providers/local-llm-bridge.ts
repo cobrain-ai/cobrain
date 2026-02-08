@@ -4,7 +4,7 @@ import type {
   LocalModel,
   DownloadedModel,
   ModelDownloadProgress,
-} from '@cobrain/core/src/types'
+} from '@cobrain/core'
 import {
   downloadModel as downloadModelFile,
   cancelDownload as cancelModelDownload,
