@@ -157,6 +157,15 @@ jobs:
               fi
             fi
           done
+          # Remove package source dirs so Metro (which watches monorepo root) can't resolve them
+          # Metro's watchFolders includes the monorepo root, so it discovers .ts source files
+          # and tries to resolve .js imports which fails. Removing src/ forces Metro to use dist/
+          for pkg in core database; do
+            if [ -d "../../packages/$pkg/src" ]; then
+              rm -rf "../../packages/$pkg/src"
+              echo "Removed packages/$pkg/src/ to prevent Metro source resolution"
+            fi
+          done
           echo "=== Verifying key native modules ==="
           ls node_modules/expo-modules-core/android/build.gradle && echo "expo-modules-core: OK" || echo "expo-modules-core: MISSING"
           ls node_modules/expo-font/android/build.gradle && echo "expo-font: OK" || echo "expo-font: MISSING"
