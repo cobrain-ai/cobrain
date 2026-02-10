@@ -24,9 +24,13 @@ move_aside() {
   local name="$2"
   local dst="$BACKUP_DIR/$name"
   if [ -e "$src" ]; then
-    mv "$src" "$dst"
+    if mv "$src" "$dst" 2>/dev/null; then
+      echo "  Moved: $src -> $dst"
+    else
+      cp -r "$src" "$dst" && rm -rf "$src"
+      echo "  Copied+removed: $src -> $dst"
+    fi
     MOVED_ITEMS+=("$dst|$src")
-    echo "  Moved: $src -> $dst"
   fi
 }
 
@@ -37,8 +41,12 @@ restore_all() {
     if [ -e "$dst" ]; then
       # Ensure parent directory exists
       mkdir -p "$(dirname "$src")"
-      mv "$dst" "$src"
-      echo "  Restored: $src"
+      if mv "$dst" "$src" 2>/dev/null; then
+        echo "  Restored: $src"
+      else
+        cp -r "$dst" "$src" && rm -rf "$dst"
+        echo "  Restored (copy): $src"
+      fi
     fi
   done
   rm -rf "$BACKUP_DIR"

@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "identifier": "ai.cobrain.desktop",
   "build": {
-    "beforeDevCommand": "",
+    "beforeDevCommand": "pnpm --filter @cobrain/web dev",
     "devUrl": "http://localhost:3000",
-    "beforeBuildCommand": "",
-    "frontendDist": "../dist"
+    "beforeBuildCommand": "pnpm --filter @cobrain/web build:export",
+    "frontendDist": "../../web/out"
   },
   "app": {
     "windows": [

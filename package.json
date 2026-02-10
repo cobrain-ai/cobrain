@@ -32,7 +32,7 @@
     "test:e2e": "playwright test",
     "clean": "turbo run clean && rm -rf node_modules",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "build:desktop": "STATIC_EXPORT=true pnpm --filter web build && cp -r apps/web/out apps/desktop/dist && pnpm --filter desktop build",
+    "build:desktop": "pnpm --filter @cobrain/web build:export && pnpm --filter @cobrain/desktop build",
     "build:android": "cd apps/mobile && npx expo prebuild --platform android && cd android && ./gradlew assembleRelease",
     "release": "echo 'Push a tag (git tag v0.1.0 && git push origin v0.1.0) to trigger GitHub Actions release'"
   },

@@ -98,12 +98,6 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: 1
 
-      - name: Copy web build to desktop
-        shell: bash
-        run: |
-          mkdir -p apps/desktop/dist
-          cp -r apps/web/out/* apps/desktop/dist/
-
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
