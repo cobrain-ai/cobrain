@@ -288,7 +288,7 @@ Current desktop-only CoBrain limitations:
 | expo-sqlite | Native SQLite | ^15.0.0 |
 | expo-notifications | Push notifications | ^0.29.0 |
 | expo-speech | Text-to-speech | ^13.0.0 |
-| @react-native-voice/voice | Voice recognition | ^3.3.0 |
+| expo-speech-recognition | Voice recognition | ^3.0.0 |
 | zustand | State management | ^5.0.0 |
 | @tanstack/react-query | Server state | ^5.0.0 |
 | react-native-reanimated | Animations | ^3.16.0 |

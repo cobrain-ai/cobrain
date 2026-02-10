@@ -52,7 +52,14 @@
           "color": "#2563eb"
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "CoBrain needs microphone access for voice capture.",
+          "speechRecognitionPermission": "CoBrain uses speech recognition to transcribe your voice notes."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { View, Text, TouchableOpacity, useColorScheme } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from 'expo-speech-recognition'
 import Animated, {
   useAnimatedStyle,
   withRepeat,
@@ -45,22 +49,46 @@ export function VoiceInput({ onResult, onCancel }: VoiceInputProps) {
     ),
   }))
 
+  // Speech recognition event listeners
+  useSpeechRecognitionEvent('start', () => {
+    setIsRecording(true)
+  })
+
+  useSpeechRecognitionEvent('end', () => {
+    setIsRecording(false)
+  })
+
+  useSpeechRecognitionEvent('result', (event) => {
+    const text = event.results[0]?.transcript ?? ''
+    setTranscript(text)
+  })
+
+  useSpeechRecognitionEvent('error', (event) => {
+    console.error('Speech recognition error:', event.error, event.message)
+    if (event.error !== 'aborted') {
+      setError(`Voice recognition error: ${event.message}`)
+    }
+    setIsRecording(false)
+  })
+
   const startRecording = useCallback(async () => {
     try {
       setError(null)
       setTranscript('')
-      setIsRecording(true)
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)
 
-      // Note: In a real implementation, you would use @react-native-voice/voice
-      // For now, we'll simulate voice input
-      // Voice.onSpeechResults = (e) => setTranscript(e.value?.[0] || '')
-      // await Voice.start('en-US')
+      const { granted } =
+        await ExpoSpeechRecognitionModule.requestPermissionsAsync()
+      if (!granted) {
+        setError('Microphone and speech recognition permissions are required.')
+        return
+      }
 
-      // Simulated transcript for demo
-      setTimeout(() => {
-        setTranscript('This is a simulated voice transcription...')
-      }, 2000)
+      ExpoSpeechRecognitionModule.start({
+        lang: 'en-US',
+        interimResults: true,
+        continuous: true,
+      })
     } catch (e) {
       console.error('Failed to start recording:', e)
       setError('Failed to start voice recognition')
@@ -70,10 +98,8 @@ export function VoiceInput({ onResult, onCancel }: VoiceInputProps) {
 
   const stopRecording = useCallback(async () => {
     try {
-      setIsRecording(false)
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-
-      // In real implementation: await Voice.stop()
+      ExpoSpeechRecognitionModule.stop()
 
       if (transcript) {
         onResult(transcript)
@@ -88,8 +114,8 @@ export function VoiceInput({ onResult, onCancel }: VoiceInputProps) {
     startRecording()
 
     return () => {
-      // Cleanup: stop recording when component unmounts
-      // In real implementation: Voice.destroy()
+      // Cleanup: abort recognition when component unmounts
+      ExpoSpeechRecognitionModule.abort()
     }
   }, [startRecording])
 

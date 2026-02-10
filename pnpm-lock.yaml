@@ -85,6 +85,9 @@ importers:
       expo-router:
         specifier: ~4.0.0
         version: 4.0.22(expo-constants@17.0.8)(expo-linking@7.0.5)(expo@52.0.49)(react-native-reanimated@3.16.7)(react-native-safe-area-context@4.12.0)(react-native-screens@4.0.0)(react-native@0.76.0)(react@18.3.1)
+      expo-speech-recognition:
+        specifier: ^3.1.0
+        version: 3.1.0(expo@52.0.49)(react-native@0.76.0)(react@18.3.1)
       expo-splash-screen:
         specifier: ~0.29.0
         version: 0.29.24(expo@52.0.49)
@@ -216,9 +219,6 @@ importers:
       autoprefixer:
         specifier: ^10.4.16
         version: 10.4.24(postcss@8.5.6)
-      cross-env:
-        specifier: ^7.0.3
-        version: 7.0.3
       eslint:
         specifier: ^8
         version: 8.57.1
@@ -6551,14 +6551,6 @@ packages:
       - ts-node
     dev: true
 
-  /cross-env@7.0.3:
-    resolution: {integrity: sha512-+/HKd6EgcQCJGh2PSjZuUitQBQynKor4wrFbRg4DtAgS1aWO+gU52xpH7M9ScGgXSYmAVS9bIJ8EzuaGw0oNAw==}
-    engines: {node: '>=10.14', npm: '>=6', yarn: '>=1'}
-    hasBin: true
-    dependencies:
-      cross-spawn: 7.0.6
-    dev: true
-
   /cross-fetch@3.2.0:
     resolution: {integrity: sha512-Q+xVJLoGOeIMXZmbUK4HYk+69cQH6LudR0Vu/pRm2YlU/hDV9CiS0gKUMaWY5f2NeUH9C1nV3bsTlCo0FsTV1Q==}
     dependencies:
@@ -8035,6 +8027,18 @@ packages:
       - react-dom
       - react-native
       - supports-color
+    dev: false
+
+  /expo-speech-recognition@3.1.0(expo@52.0.49)(react-native@0.76.0)(react@18.3.1):
+    resolution: {integrity: sha512-DgCvY42hbhGDxDKJD0WjgjZboPOXY58JNNQ+zaBQmB+3M2PR2tS8ZTP/yIwslbe30Cnw8yf5JBxrqkZFiLmewQ==}
+    peerDependencies:
+      expo: '*'
+      react: '*'
+      react-native: '*'
+    dependencies:
+      expo: 52.0.49(@babel/core@7.29.0)(@babel/preset-env@7.29.0)(react-native@0.76.0)(react@18.3.1)
+      react: 18.3.1
+      react-native: 0.76.0(@babel/core@7.29.0)(@babel/preset-env@7.29.0)(@types/react@19.1.6)(react@18.3.1)
     dev: false
 
   /expo-splash-screen@0.29.24(expo@52.0.49):
