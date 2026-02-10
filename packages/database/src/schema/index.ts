@@ -327,6 +327,184 @@ export const devices = sqliteTable(
 )
 
 // ============================================
+// Publishing System
+// ============================================
+
+export type PublishingPlatform =
+  | 'threads'
+  | 'hashnode'
+  | 'twitter'
+  | 'wordpress'
+  | 'medium'
+  | 'linkedin'
+  | 'mastodon'
+  | 'bluesky'
+  | 'devto'
+  | 'ghost'
+
+export type PublishingContentStatus = 'draft' | 'generating' | 'ready' | 'published' | 'failed'
+export type PublishingPostStatus = 'queued' | 'scheduled' | 'publishing' | 'published' | 'failed' | 'skipped'
+
+/** Connected publishing accounts (from OmniPost: connected_accounts) */
+export const publishingAccounts = sqliteTable(
+  'publishing_accounts',
+  {
+    id: text('id').primaryKey().notNull(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    platform: text('platform').$type<PublishingPlatform>().notNull(),
+    accountId: text('account_id').notNull(),
+    accountName: text('account_name'),
+    accessToken: text('access_token').notNull(),
+    refreshToken: text('refresh_token'),
+    tokenExpiresAt: integer('token_expires_at'),
+    isActive: integer('is_active', { mode: 'boolean' }).default(true).notNull(),
+    metadata: text('metadata', { mode: 'json' }).default('{}').notNull(),
+    connectedAt: integer('connected_at', { mode: 'timestamp' })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+  },
+  (table) => [
+    index('publishing_accounts_user_id_idx').on(table.userId),
+    index('publishing_accounts_platform_idx').on(table.platform),
+  ]
+)
+
+/** Composer drafts - generated content before publishing */
+export const composerDrafts = sqliteTable(
+  'composer_drafts',
+  {
+    id: text('id').primaryKey().notNull(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    title: text('title'),
+    sourceNoteIds: text('source_note_ids', { mode: 'json' }).$type<string[]>().default([]).notNull(),
+    status: text('status').$type<PublishingContentStatus>().default('draft').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+  },
+  (table) => [
+    index('composer_drafts_user_id_idx').on(table.userId),
+    index('composer_drafts_status_idx').on(table.status),
+  ]
+)
+
+/** Per-platform content within a draft */
+export const draftContent = sqliteTable(
+  'draft_content',
+  {
+    id: text('id').primaryKey().notNull(),
+    draftId: text('draft_id')
+      .notNull()
+      .references(() => composerDrafts.id, { onDelete: 'cascade' }),
+    platform: text('platform').$type<PublishingPlatform>().notNull(),
+    content: text('content').notNull(),
+    format: text('format').default('markdown').notNull(),
+    metadata: text('metadata', { mode: 'json' }).default('{}').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+  },
+  (table) => [
+    index('draft_content_draft_id_idx').on(table.draftId),
+    index('draft_content_platform_idx').on(table.platform),
+  ]
+)
+
+/** Published posts with status tracking */
+export const publishedPosts = sqliteTable(
+  'published_posts',
+  {
+    id: text('id').primaryKey().notNull(),
+    draftId: text('draft_id').references(() => composerDrafts.id),
+    draftContentId: text('draft_content_id').references(() => draftContent.id),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    platform: text('platform').$type<PublishingPlatform>().notNull(),
+    accountId: text('account_id').references(() => publishingAccounts.id),
+    platformPostId: text('platform_post_id'),
+    url: text('url'),
+    status: text('status').$type<PublishingPostStatus>().default('queued').notNull(),
+    scheduledFor: integer('scheduled_for', { mode: 'timestamp' }),
+    publishedAt: integer('published_at', { mode: 'timestamp' }),
+    error: text('error'),
+    retryCount: integer('retry_count').default(0).notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+  },
+  (table) => [
+    index('published_posts_user_id_idx').on(table.userId),
+    index('published_posts_status_idx').on(table.status),
+    index('published_posts_draft_id_idx').on(table.draftId),
+    index('published_posts_scheduled_for_idx').on(table.scheduledFor),
+  ]
+)
+
+/** Writing style guides for AI content generation */
+export const writingStyleGuides = sqliteTable(
+  'writing_style_guides',
+  {
+    id: text('id').primaryKey().notNull(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    isDefault: integer('is_default', { mode: 'boolean' }).default(false).notNull(),
+    tone: text('tone').default('professional').notNull(),
+    language: text('language').default('en').notNull(),
+    targetAudience: text('target_audience'),
+    customToneDescription: text('custom_tone_description'),
+    samplePost: text('sample_post'),
+    rules: text('rules', { mode: 'json' }).default('[]').notNull(),
+    serviceOverrides: text('service_overrides', { mode: 'json' }).default('{}').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+  },
+  (table) => [
+    index('writing_style_guides_user_id_idx').on(table.userId),
+  ]
+)
+
+/** Publish queue for scheduling (replaces OmniPost's BullMQ) */
+export const publishQueue = sqliteTable(
+  'publish_queue',
+  {
+    id: text('id').primaryKey().notNull(),
+    publishedPostId: text('published_post_id')
+      .notNull()
+      .references(() => publishedPosts.id, { onDelete: 'cascade' }),
+    priority: integer('priority').default(0).notNull(),
+    scheduledAt: integer('scheduled_at', { mode: 'timestamp' }),
+    attempts: integer('attempts').default(0).notNull(),
+    maxAttempts: integer('max_attempts').default(3).notNull(),
+    lastError: text('last_error'),
+    nextRetryAt: integer('next_retry_at', { mode: 'timestamp' }),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+  },
+  (table) => [
+    index('publish_queue_scheduled_at_idx').on(table.scheduledAt),
+    index('publish_queue_next_retry_at_idx').on(table.nextRetryAt),
+  ]
+)
+
+// ============================================
 // Type exports for repositories
 // ============================================
 
@@ -354,3 +532,17 @@ export type Device = typeof devices.$inferSelect
 export type NewDevice = typeof devices.$inferInsert
 export type ShareAccessLog = typeof shareAccessLogs.$inferSelect
 export type NewShareAccessLog = typeof shareAccessLogs.$inferInsert
+
+// Publishing System Types
+export type PublishingAccount = typeof publishingAccounts.$inferSelect
+export type NewPublishingAccount = typeof publishingAccounts.$inferInsert
+export type ComposerDraft = typeof composerDrafts.$inferSelect
+export type NewComposerDraft = typeof composerDrafts.$inferInsert
+export type DraftContent = typeof draftContent.$inferSelect
+export type NewDraftContent = typeof draftContent.$inferInsert
+export type PublishedPost = typeof publishedPosts.$inferSelect
+export type NewPublishedPost = typeof publishedPosts.$inferInsert
+export type WritingStyleGuide = typeof writingStyleGuides.$inferSelect
+export type NewWritingStyleGuide = typeof writingStyleGuides.$inferInsert
+export type PublishQueueItem = typeof publishQueue.$inferSelect
+export type NewPublishQueueItem = typeof publishQueue.$inferInsert
