@@ -5,14 +5,11 @@ const publicRoutes = ['/', '/login', '/signup', '/forgot-password', '/reset-pass
 const authRoutes = ['/login', '/signup']
 
 function isValidCallbackUrl(callbackUrl: string, origin: string): boolean {
-  // Only allow relative paths starting with /
-  if (!callbackUrl.startsWith('/')) {
+  // Only allow relative paths; block protocol-relative URLs (//evil.com)
+  if (!callbackUrl.startsWith('/') || callbackUrl.startsWith('//')) {
     return false
   }
-  // Prevent protocol-relative URLs (//evil.com)
-  if (callbackUrl.startsWith('//')) {
-    return false
-  }
+
   // Validate the URL resolves to the same origin
   try {
     const resolved = new URL(callbackUrl, origin)
@@ -23,12 +20,16 @@ function isValidCallbackUrl(callbackUrl: string, origin: string): boolean {
 }
 
 export default auth((req) => {
+  // Skip auth in local development
+  if (process.env.NODE_ENV === 'development') {
+    return NextResponse.next()
+  }
+
   const { nextUrl } = req
   const isLoggedIn = !!req.auth
 
-  const isPublicRoute = publicRoutes.some(
-    (route) => nextUrl.pathname === route || nextUrl.pathname.startsWith('/api/auth')
-  )
+  const isApiAuthRoute = nextUrl.pathname.startsWith('/api/auth')
+  const isPublicRoute = isApiAuthRoute || publicRoutes.includes(nextUrl.pathname)
   const isAuthRoute = authRoutes.includes(nextUrl.pathname)
 
   // Redirect logged-in users away from auth pages

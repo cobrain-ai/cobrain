@@ -11,7 +11,8 @@ describe('MockProvider', () => {
   describe('constructor', () => {
     it('should create with default configuration', () => {
       expect(provider.name).toBe('Mock')
-      expect(provider.type).toBe('mock')
+      // MockProvider uses 'ollama' as type for compatibility
+      expect(provider.type).toBe('ollama')
     })
 
     it('should accept custom default response', () => {

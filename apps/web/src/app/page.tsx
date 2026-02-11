@@ -35,7 +35,7 @@ export default function Home() {
             ⭐ Star on GitHub
           </a>
           <a
-            href="#"
+            href="/onboarding"
             className="px-6 py-3 border border-gray-300 dark:border-gray-700 rounded-lg font-semibold hover:bg-gray-100 dark:hover:bg-gray-800 transition"
           >
             Get Started →

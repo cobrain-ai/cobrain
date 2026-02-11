@@ -6,6 +6,7 @@ export * from './providers/index.js'
 export * from './utils/index.js'
 export * from './plugins/index.js'
 export * from './publishing/index.js'
+export * from './agents/index.js'
 
 // Note: React hooks are exported from '@cobrain/core/client' to avoid
 // "use client" issues when importing in server components.

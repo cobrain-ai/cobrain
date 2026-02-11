@@ -12,12 +12,43 @@ import type {
 import { generateId } from '../utils/id.js'
 
 interface ClaudeCliJsonResponse {
+  type?: string
   result: string
   model?: string
   usage?: {
     input_tokens: number
     output_tokens: number
   }
+  modelUsage?: Record<string, {
+    inputTokens: number
+    outputTokens: number
+  }>
+}
+
+interface TokenCount {
+  inputTokens: number
+  outputTokens: number
+}
+
+function extractTokenUsage(data: ClaudeCliJsonResponse): TokenCount {
+  if (data.usage) {
+    return {
+      inputTokens: data.usage.input_tokens,
+      outputTokens: data.usage.output_tokens,
+    }
+  }
+
+  if (data.modelUsage) {
+    const first = Object.values(data.modelUsage)[0]
+    if (first) {
+      return {
+        inputTokens: first.inputTokens,
+        outputTokens: first.outputTokens,
+      }
+    }
+  }
+
+  return { inputTokens: 0, outputTokens: 0 }
 }
 
 export class ClaudeCliProvider extends BaseProvider {
@@ -104,10 +135,6 @@ export class ClaudeCliProvider extends BaseProvider {
           '-p', prompt,
         ]
 
-        if (options?.maxTokens) {
-          args.push('--max-tokens', String(options.maxTokens))
-        }
-
         const proc = spawn(this.cliPath, args, {
           stdio: ['pipe', 'pipe', 'pipe'],
         })
@@ -133,13 +160,17 @@ export class ClaudeCliProvider extends BaseProvider {
 
           try {
             const data = JSON.parse(stdout) as ClaudeCliJsonResponse
+            const content = data.result ?? ''
+            const { inputTokens, outputTokens } = extractTokenUsage(data)
+            const hasUsage = inputTokens > 0 || outputTokens > 0
+
             resolve(this.createResponse({
-              content: data.result,
+              content,
               model,
-              usage: data.usage ? {
-                inputTokens: data.usage.input_tokens,
-                outputTokens: data.usage.output_tokens,
-                totalTokens: data.usage.input_tokens + data.usage.output_tokens,
+              usage: hasUsage ? {
+                inputTokens,
+                outputTokens,
+                totalTokens: inputTokens + outputTokens,
               } : undefined,
               finishReason: 'stop',
               latencyMs,
@@ -176,8 +207,7 @@ export class ClaudeCliProvider extends BaseProvider {
     messages: LLMMessage[],
     options?: LLMCompletionOptions
   ): AsyncIterable<LLMStreamChunk> {
-    const _model = options?.model ?? this.getModel()
-    void _model // For future use when stream supports model selection
+    void (options?.model ?? this.getModel()) // Reserved for future stream model selection
     const responseId = generateId()
     const prompt = this.buildPrompt(messages)
 
@@ -188,10 +218,6 @@ export class ClaudeCliProvider extends BaseProvider {
       '--output-format', 'stream-json',
       '-p', prompt,
     ]
-
-    if (options?.maxTokens) {
-      args.push('--max-tokens', String(options.maxTokens))
-    }
 
     const proc = spawn(this.cliPath, args, {
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -255,12 +281,11 @@ export class ClaudeCliProvider extends BaseProvider {
         const content = typeof m.content === 'string'
           ? m.content
           : m.content.map((b) => b.text).join('')
-        if (m.role === 'system') {
-          return `System: ${content}`
-        } else if (m.role === 'user') {
-          return `Human: ${content}`
-        } else {
-          return `Assistant: ${content}`
+
+        switch (m.role) {
+          case 'system': return `System: ${content}`
+          case 'user': return `Human: ${content}`
+          case 'assistant': return `Assistant: ${content}`
         }
       })
       .join('\n\n')

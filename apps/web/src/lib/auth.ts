@@ -13,7 +13,7 @@ const loginSchema = z.object({
 // Dummy hash for timing-safe comparison when user not found
 const DUMMY_HASH = '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi'
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+const nextAuth = NextAuth({
   providers: [
     Credentials({
       name: 'credentials',
@@ -88,6 +88,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
 })
+
+export const { handlers, signIn, signOut } = nextAuth
+
+const DEV_SESSION = {
+  user: { id: '1', email: 'demo@cobrain.ai', name: 'Demo User', image: null },
+  expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+}
+
+/**
+ * In development, bypass session checks but preserve middleware wrapping.
+ * - Called as `auth(callback)`: delegates to nextAuth.auth for middleware
+ * - Called as `await auth()`: returns a mock session immediately
+ */
+function devAuth(...args: [Function] | []): unknown {
+  if (typeof args[0] === 'function') {
+    return nextAuth.auth(args[0] as Parameters<typeof nextAuth.auth>[0])
+  }
+  return Promise.resolve(DEV_SESSION)
+}
+
+export const auth = (
+  process.env.NODE_ENV === 'development' ? devAuth : nextAuth.auth
+) as typeof nextAuth.auth
 
 declare module 'next-auth' {
   interface Session {

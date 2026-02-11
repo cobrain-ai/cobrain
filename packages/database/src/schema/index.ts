@@ -505,6 +505,34 @@ export const publishQueue = sqliteTable(
 )
 
 // ============================================
+// Agent System Data Store
+// ============================================
+
+/** Agent data storage - flexible key-value store for agent system */
+export const agentData = sqliteTable(
+  'agent_data',
+  {
+    id: text('id').primaryKey().notNull(),
+    key: text('key').notNull(),
+    namespace: text('namespace').default('default').notNull(),
+    value: text('value', { mode: 'json' }).notNull(),
+    metadata: text('metadata', { mode: 'json' }).default('{}').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex('agent_data_key_namespace_idx').on(table.key, table.namespace),
+    index('agent_data_namespace_idx').on(table.namespace),
+    index('agent_data_key_idx').on(table.key),
+    index('agent_data_created_at_idx').on(table.createdAt),
+  ]
+)
+
+// ============================================
 // Type exports for repositories
 // ============================================
 
@@ -546,3 +574,5 @@ export type WritingStyleGuide = typeof writingStyleGuides.$inferSelect
 export type NewWritingStyleGuide = typeof writingStyleGuides.$inferInsert
 export type PublishQueueItem = typeof publishQueue.$inferSelect
 export type NewPublishQueueItem = typeof publishQueue.$inferInsert
+export type AgentData = typeof agentData.$inferSelect
+export type NewAgentData = typeof agentData.$inferInsert
