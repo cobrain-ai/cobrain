@@ -461,13 +461,18 @@ export const publishQueueRepository = {
 
   async recordAttempt(id: string, error?: string) {
     const db = getDatabase()
+
+    // Read current attempts to compute proper backoff
+    const current = db.select().from(publishQueue).where(eq(publishQueue.id, id)).get()
+    const currentAttempts = current?.attempts ?? 0
+
     const updates: Record<string, unknown> = {
       attempts: sql`attempts + 1`,
     }
     if (error) {
       updates.lastError = error
-      // Exponential backoff: 1s, 2s, 4s
-      updates.nextRetryAt = new Date(Date.now() + Math.pow(2, 0) * 1000) // simplified
+      // Exponential backoff: 1s, 2s, 4s, 8s, ...
+      updates.nextRetryAt = new Date(Date.now() + Math.pow(2, currentAttempts) * 1000)
     }
     await db.update(publishQueue).set(updates as any).where(eq(publishQueue.id, id))
   },

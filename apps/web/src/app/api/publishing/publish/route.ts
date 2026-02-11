@@ -5,6 +5,8 @@ import {
   publishingAccountsRepository,
   publishedPostsRepository,
   publishQueueRepository,
+  composerDraftsRepository,
+  draftContentRepository,
 } from '@cobrain/database'
 
 const publishSchema = z.object({
@@ -34,12 +36,31 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: result.error.errors[0].message }, { status: 400 })
   }
 
-  const { draftId, draftContentId, platform, accountId, scheduledFor } = result.data
+  const { platform, accountId, content, scheduledFor } = result.data
+  let { draftId, draftContentId } = result.data
 
   // Verify account belongs to user
   const account = await publishingAccountsRepository.findById(accountId)
   if (!account || account.userId !== session.user.id) {
     return NextResponse.json({ error: 'Publishing account not found' }, { status: 404 })
+  }
+
+  // If no draft exists, create one to store the content for the queue processor
+  if (!draftContentId) {
+    if (!draftId) {
+      const draft = await composerDraftsRepository.create({
+        userId: session.user.id,
+        title: `Publish to ${platform}`,
+      })
+      draftId = draft.id
+    }
+
+    const dc = await draftContentRepository.create({
+      draftId,
+      platform: platform as any,
+      content,
+    })
+    draftContentId = dc.id
   }
 
   // Create published post record

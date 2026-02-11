@@ -8,6 +8,13 @@ import { Sidebar } from './sidebar'
 import { Header } from './header'
 import { QuickCapture } from '@/components/capture'
 import { NotificationBanner } from '@/components/notifications'
+import { useQueueProcessor } from '@/hooks/use-queue-processor'
+
+/** Silent background queue processor — runs polling inside the app shell */
+function QueueProcessorRunner() {
+  useQueueProcessor()
+  return null
+}
 
 interface AppShellProps {
   children: ReactNode
@@ -28,6 +35,7 @@ export function AppShell({ children }: AppShellProps) {
             </div>
             <QuickCapture />
             <NotificationBanner />
+            <QueueProcessorRunner />
           </div>
         </NotificationProvider>
       </LayoutProvider>
