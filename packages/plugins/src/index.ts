@@ -64,6 +64,18 @@ export {
   createTwitterAdapter,
 } from './publishing/twitter/adapter.js'
 export {
+  DevToAdapter,
+  createDevToAdapter,
+} from './publishing/devto/adapter.js'
+export {
+  BlueskyAdapter,
+  createBlueskyAdapter,
+} from './publishing/bluesky/adapter.js'
+export {
+  MediumAdapter,
+  createMediumAdapter,
+} from './publishing/medium/adapter.js'
+export {
   publishingServices,
   registerPublishingServices,
 } from './publishing/index.js'

@@ -14,6 +14,12 @@ export type PublishErrorCode =
   | 'PLATFORM_ERROR'
   | 'VALIDATION_ERROR'
   | 'NOT_INITIALIZED'
+  | 'TOKEN_REFRESH_FAILED'
+  | 'SESSION_EXPIRED'
+  | 'INVALID_API_KEY'
+  | 'CONTENT_TOO_LONG'
+  | 'DUPLICATE_CONTENT'
+  | 'ACCOUNT_SUSPENDED'
 
 /** Publishing error with retry classification */
 export class PublishError extends Error {
@@ -64,6 +70,57 @@ export class PublishError extends Error {
   static notInitialized(platform: Platform): PublishError {
     return new PublishError('NOT_INITIALIZED', 'Service not initialized', platform, false)
   }
+
+  static tokenRefreshFailed(platform: Platform, reason: string, cause?: Error): PublishError {
+    return new PublishError('TOKEN_REFRESH_FAILED', `Token refresh failed: ${reason}`, platform, false, cause)
+  }
+
+  static sessionExpired(platform: Platform, cause?: Error): PublishError {
+    return new PublishError('SESSION_EXPIRED', 'Session has expired', platform, true, cause)
+  }
+
+  static invalidApiKey(platform: Platform, cause?: Error): PublishError {
+    return new PublishError('INVALID_API_KEY', 'API key is invalid or revoked', platform, false, cause)
+  }
+
+  static contentTooLong(platform: Platform, limit: number, actual: number): PublishError {
+    return new PublishError('CONTENT_TOO_LONG', `Content is ${actual} chars, limit is ${limit}`, platform, false)
+  }
+
+  static duplicateContent(platform: Platform, cause?: Error): PublishError {
+    return new PublishError('DUPLICATE_CONTENT', 'This content has already been published', platform, false, cause)
+  }
+
+  static accountSuspended(platform: Platform, cause?: Error): PublishError {
+    return new PublishError('ACCOUNT_SUSPENDED', 'Account has been suspended', platform, false, cause)
+  }
+}
+
+/** Map error codes to user-friendly messages */
+const USER_FRIENDLY_MESSAGES: Record<PublishErrorCode, string> = {
+  AUTH_EXPIRED: 'Your login has expired. Please reconnect your account.',
+  AUTH_REVOKED: 'Your account access was revoked. Please reconnect your account.',
+  RATE_LIMITED: 'Too many requests. Please wait a moment and try again.',
+  QUOTA_EXCEEDED: 'You have reached the platform API limit. Please try again later.',
+  CONTENT_REJECTED: 'The platform rejected your content. Please review and try again.',
+  NETWORK_ERROR: 'A network error occurred. Please check your connection and try again.',
+  PLATFORM_ERROR: 'The platform encountered an error. Please try again later.',
+  VALIDATION_ERROR: 'Your content has validation errors. Please review and fix them.',
+  NOT_INITIALIZED: 'The publishing service is not ready. Please try again.',
+  TOKEN_REFRESH_FAILED: 'Could not refresh your login. Please reconnect your account.',
+  SESSION_EXPIRED: 'Your session has expired. Please reconnect your account.',
+  INVALID_API_KEY: 'Your API key is invalid or has been revoked. Please update it in settings.',
+  CONTENT_TOO_LONG: 'Your content exceeds the platform character limit. Please shorten it.',
+  DUPLICATE_CONTENT: 'This content has already been published to this platform.',
+  ACCOUNT_SUSPENDED: 'Your account has been suspended by the platform. Please check your account status.',
+}
+
+/** Get a user-friendly message for a publishing error */
+export function getUserFriendlyMessage(error: unknown): string {
+  if (error instanceof PublishError) {
+    return USER_FRIENDLY_MESSAGES[error.code] ?? error.message
+  }
+  return 'An unexpected error occurred. Please try again.'
 }
 
 /** Check if an error is retryable */
