@@ -40,3 +40,21 @@ export type {
   ShareAccessLog,
   ShareAnalytics,
 } from './views.js'
+
+export {
+  publishingAccountsRepository,
+  composerDraftsRepository,
+  draftContentRepository,
+  publishedPostsRepository,
+  writingStyleGuidesRepository,
+  publishQueueRepository,
+} from './publishing.js'
+export type {
+  CreatePublishingAccountInput,
+  CreateDraftInput,
+  UpdateDraftInput,
+  CreateDraftContentInput,
+  CreatePublishedPostInput,
+  CreateStyleGuideInput,
+  UpdateStyleGuideInput,
+} from './publishing.js'

@@ -255,7 +255,7 @@ export function toCoreSearchResults(
   notesMap: Map<string, Note>
 ): CoreSearchResult[] {
   return results
-    .map((result) => {
+    .map((result): CoreSearchResult | null => {
       const note = notesMap.get(result.noteId)
       if (!note) return null
       return {

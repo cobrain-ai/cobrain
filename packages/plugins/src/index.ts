@@ -1,11 +1,48 @@
 // @cobrain/plugins - Official CoBrain Plugins
 // Core plugins for reminders, entities, views, search, publishing, and composer
 
-// Plugin exports (existing)
-export * from './reminders/index.js'
-export * from './entities/index.js'
-export * from './views/index.js'
-export * from './search/index.js'
+// Reminders plugin exports (named to avoid manifest collision)
+export {
+  RemindersPlugin,
+  createRemindersPlugin,
+  extractReminders,
+  extractBasicReminders,
+  extractRemindersWithLLM,
+} from './reminders/index.js'
+export type { ExtractedReminder } from './reminders/index.js'
+
+// Entities plugin exports
+export {
+  EntitiesPlugin,
+  createEntitiesPlugin,
+  extractEntities,
+  extractUrls,
+  extractBasicDates,
+  extractEntitiesWithLLM,
+  toEntities,
+} from './entities/index.js'
+export type { ExtractedEntity, ExtractionOptions } from './entities/index.js'
+
+// Views plugin exports
+export { ViewsPlugin, createViewsPlugin } from './views/index.js'
+export type {
+  ViewDefinition,
+  ViewQuery as PluginViewQuery,
+  ViewLayout as PluginViewLayout,
+  ViewSnapshot as PluginViewSnapshot,
+} from './views/index.js'
+
+// Search plugin exports
+export {
+  SearchPlugin,
+  createSearchPlugin,
+  search,
+  keywordSearch,
+  semanticSearch,
+  hybridSearch,
+  toCoreSearchResults,
+} from './search/index.js'
+export type { SearchRequest, SearchResult, SearchOptions } from './search/index.js'
 
 // Composer plugin exports (named to avoid manifest collision)
 export { ComposerPlugin, createComposerPlugin } from './composer/plugin.js'
